@@ -1,0 +1,33 @@
+{
+  "name": "auctioneer",
+  "version": "1.0.0",
+  "description": "Web Auction App",
+  "main": "index.js",
+  "packageManager": "npm@10.9.2",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noneiann/Auctioneer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/noneiann/Auctioneer/issues"
+  },
+  "homepage": "https://github.com/noneiann/Auctioneer#readme",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.5.5",
+    "turborepo": "^0.0.1"
+  }
+}
