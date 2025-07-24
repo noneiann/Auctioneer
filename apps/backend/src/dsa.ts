@@ -2,33 +2,19 @@ import { Router, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "@auctioneer/db";
-import { ApiResponse } from "@auctioneer/types/src";
+import {
+	ApiResponse,
+	GetUserRequest,
+	RegisterRequest,
+	LoginRequest,
+} from "@auctioneer/types/src";
 
 const router = Router();
 
-interface RegisterRequest extends Request {
-	body: {
-		email: string;
-		username: string;
-		password: string;
-	};
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is not set");
 }
-
-interface LoginRequest extends Request {
-	body: {
-		email: string;
-		password: string;
-	};
-}
-
-interface GetUserRequest extends Request {
-	params: {
-		id: string;
-	};
-}
-
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
-
 router.get(
 	"/user/:id",
 	async (req: GetUserRequest, res: Response<ApiResponse<any>>) => {
