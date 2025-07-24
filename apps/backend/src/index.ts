@@ -1,8 +1,11 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import authRoutes from "./routes/auth";
+import authRoutes from "./routes/AuthRoutes";
+import * as fs from "fs";
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
