@@ -8,7 +8,11 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "db:setup": "npx prisma generate --schema=packages/db/prisma/schema.prisma && npx prisma migrate dev --schema=packages/db/prisma/schema.prisma",
+    "db:update": "npx prisma migrate dev --schema=packages/db/prisma/schema.prisma",
+    "db:sync": "npx prisma generate --schema=packages/db/prisma/schema.prisma",
+    "bootstrap": "npm install && npm run db:setup"
   },
   "repository": {
     "type": "git",
