@@ -5,11 +5,20 @@ export interface ApiResponse<T> {
 	data: T;
 }
 
+export interface ApiRequest<T = any> {
+	url: string;
+	method?: "GET" | "POST" | "PUT" | "DELETE";
+	body?: T;
+	headers?: Record<string, string>;
+}
+
 export interface RegisterRequest extends Request {
 	body: {
 		email: string;
 		username: string;
 		password: string;
+		firstName: string;
+		lastName: string;
 	};
 }
 
@@ -38,6 +47,8 @@ export interface JwtPayloadUser {
 export interface User {
 	id: string;
 	email: string;
+	firstName: string;
+	lastName: string;
 	username: string;
 	permission: number;
 	createdAt: Date;

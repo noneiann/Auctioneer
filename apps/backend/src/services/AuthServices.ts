@@ -28,7 +28,9 @@ export const login = async (email: string, password: string) => {
 export const register = async (
 	email: string,
 	username: string,
-	password: string
+	password: string,
+	firstName: string,
+	lastName: string
 ) => {
 	const existingUser = await prisma.user.findUnique({
 		where: { email, username },
@@ -45,6 +47,8 @@ export const register = async (
 			email,
 			username,
 			password: hashedPassword,
+			firstName,
+			lastName,
 		},
 	});
 	if (!newUser) {
