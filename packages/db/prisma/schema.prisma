@@ -18,6 +18,8 @@ model user {
   id          String    @id @default(cuid())
   email       String    @unique
   password    String
+  firstName   String
+  lastName    String
   username    String
   permission  Int       @default(0)
   createdAt   DateTime  @default(now())

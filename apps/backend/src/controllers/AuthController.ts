@@ -51,8 +51,8 @@ export const registerOne = async (
 	res: Response<ApiResponse<any>>
 ) => {
 	try {
-		const { email, username, password } = req.body;
-		if (!email || !username || !password) {
+		const { email, username, password, firstName, lastName } = req.body;
+		if (!email || !username || !password || !firstName || !lastName) {
 			return res
 				.status(400)
 				.json({ success: false, data: "Missing required fields" });
@@ -65,7 +65,7 @@ export const registerOne = async (
 			});
 		}
 
-		await authServices.register(email, username, password);
+		await authServices.register(email, username, password, firstName, lastName);
 
 		const user = await authServices.login(email, password);
 

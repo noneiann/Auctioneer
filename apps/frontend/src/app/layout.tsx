@@ -28,10 +28,6 @@ export default function RootLayout({
 	return (
 		<html lang='en'>
 			<body className={`${poppins.variable} ${poppins.variable} antialiased`}>
-				<div className=''>
-					<Header />
-					<Navbar />
-				</div>
 				{children}
 			</body>
 		</html>
