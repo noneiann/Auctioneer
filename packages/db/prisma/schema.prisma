@@ -4,7 +4,6 @@
 // It also defines the relationships between these models
 // The schema is used to generate the Prisma client for database operations
 
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -16,66 +15,68 @@ datasource db {
 }
 
 model user {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  password   String
-  firstName  String
-  lastName   String
-  username   String
-  permission Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  username    String
+  permission  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  auctions   auction[]  @relation("UserAuctions")
-  items      item[]     @relation("UserItems")
-  bids       bid[]      @relation("UserBids")
+  auctions    auction[] @relation("UserAuctions")
+  items       item[]    @relation("UserItems")
+  bids        bid[]     @relation("UserBids")
 }
 
 model item {
-  id           String    @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
   description  String
-  imageUrl     String
-  type         ItemType  // e.g. AUCTION, DIRECT, BARTER
-  price        Float?    // for direct/buy-sell or reference value
-  startingBid  Float?    // only used for auction
-  currentBid   Float?    // only used for auction
+  imageUrl     String[]   
+  type         ItemType   // e.g. AUCTION, DIRECT, BARTER
+  price        Float?     // for direct/buy-sell or reference value
   status       ItemStatus @default(AVAILABLE)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   ownerId      String
-  owner        user      @relation("UserItems", fields: [ownerId], references: [id])
+  owner        user       @relation("UserItems", fields: [ownerId], references: [id])
 
+  // if this item is up for auction, link to that auction:
   auction      auction?
-  bids         bid[]
 }
 
 model auction {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  startTime   DateTime
-  endTime     DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  ownerId     String
-  owner       user     @relation("UserAuctions", fields: [ownerId], references: [id])
+  id           String     @id @default(cuid())
 
-  itemId      String   @unique
-  item        item     @relation(fields: [itemId], references: [id])
+  startTime    DateTime
+  endTime      DateTime
+  startingBid  Float
+  currentBid   Float      @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  ownerId      String
+  owner        user       @relation("UserAuctions", fields: [ownerId], references: [id])
+
+  itemId       String     @unique
+  item         item       @relation(fields: [itemId], references: [id])
+
+  bids         bid[]
 }
 
 model bid {
-  id        String   @id @default(cuid())
-  amount    Float
-  createdAt DateTime @default(now())
+  id           String     @id @default(cuid())
+  amount       Float
+  createdAt    DateTime   @default(now())
 
-  bidderId  String
-  bidder    user     @relation("UserBids", fields: [bidderId], references: [id])
+  bidderId     String
+  bidder       user       @relation("UserBids", fields: [bidderId], references: [id])
 
-  itemId    String
-  item      item     @relation(fields: [itemId], references: [id])
+  auctionId    String
+  auction      auction    @relation(fields: [auctionId], references: [id])
 }
 
 enum ItemType {

@@ -54,3 +54,60 @@ export interface User {
 	createdAt: Date;
 	updatedAt: Date;
 }
+
+export interface Auction {
+	id: string;
+	ownerId: string;
+	title: string;
+	description: string;
+	startPrice: number;
+	currentBid: number;
+	startingBid: number;
+	endTime: Date;
+	createdAt: Date;
+	updatedAt: Date;
+	itemId: string;
+}
+
+// Payload for creating an auction
+export interface CreateAuctionPayload {
+	ownerId: string; // matches ownerId
+	itemId: string; // connect to an existing item
+	startingBid: number; // matches startingBid
+	startTime: Date; // pass a real Date
+	endTime: Date; // pass a real Date
+}
+// Payload for updating an auction
+export interface UpdateAuctionPayload {
+	title?: string;
+	description?: string;
+	startPrice?: number;
+	endTime?: string;
+	startingBid?: number;
+}
+
+// Item types and statuses
+export type ItemType = "AUCTION" | "DIRECT" | "BARTER";
+export type ItemStatus = "AVAILABLE" | "SOLD" | "REMOVED"; // Add based on your Prisma enum
+
+export interface Item {
+	id: string;
+	name: string;
+	description: string;
+	imageUrl: string[];
+	type: ItemType;
+	price?: number;
+	status: ItemStatus;
+	createdAt: Date;
+	updatedAt: Date;
+	ownerId: string;
+}
+export interface CreateItemPayload {
+	name: string;
+	description: string;
+	imageUrl: string[];
+	type: ItemType;
+
+	price?: number;
+	ownerId: string;
+}
