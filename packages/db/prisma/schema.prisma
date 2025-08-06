@@ -1,8 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// This file is part of the Auctioneer project
+// It defines the Prisma schema for the Auctioneer application
+// This schema includes models for users, items, auctions, and bids
+// It also defines the relationships between these models
+// The schema is used to generate the Prisma client for database operations
 
 generator client {
   provider = "prisma-client-js"
@@ -24,4 +24,70 @@ model user {
   permission  Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  auctions    auction[] @relation("UserAuctions")
+  items       item[]    @relation("UserItems")
+  bids        bid[]     @relation("UserBids")
+}
+
+model item {
+  id           String     @id @default(cuid())
+  name         String
+  description  String
+  imageUrl     String[]   
+  type         ItemType   // e.g. AUCTION, DIRECT, BARTER
+  price        Float?     // for direct/buy-sell or reference value
+  status       ItemStatus @default(AVAILABLE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  ownerId      String
+  owner        user       @relation("UserItems", fields: [ownerId], references: [id])
+
+  // if this item is up for auction, link to that auction:
+  auction      auction?
+}
+
+model auction {
+  id           String     @id @default(cuid())
+
+  startTime    DateTime
+  endTime      DateTime
+  startingBid  Float
+  currentBid   Float      @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  ownerId      String
+  owner        user       @relation("UserAuctions", fields: [ownerId], references: [id])
+
+  itemId       String     @unique
+  item         item       @relation(fields: [itemId], references: [id])
+
+  bids         bid[]
+}
+
+model bid {
+  id           String     @id @default(cuid())
+  amount       Float
+  createdAt    DateTime   @default(now())
+
+  bidderId     String
+  bidder       user       @relation("UserBids", fields: [bidderId], references: [id])
+
+  auctionId    String
+  auction      auction    @relation(fields: [auctionId], references: [id])
+}
+
+enum ItemType {
+  AUCTION
+  DIRECT
+  BARTER
+}
+
+enum ItemStatus {
+  AVAILABLE
+  SOLD
+  EXPIRED
+  WITHDRAWN
 }
