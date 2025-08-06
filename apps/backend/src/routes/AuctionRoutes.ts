@@ -14,3 +14,5 @@ router.get("/", authenticateToken, listAuctions);
 router.get("/:id", authenticateToken, getAuction);
 router.put("/:id", authenticateToken, updateAuction);
 router.delete("/:id", authenticateToken, deleteAuction);
+
+export default router;

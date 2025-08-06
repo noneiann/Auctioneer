@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@auctioneer/types": "*",
+    "@headlessui/react": "^2.2.7",
     "@prisma/client": "^6.12.0",
+    "lucide-react": "^0.536.0",
     "next": "15.4.1",
     "next-auth": "^4.24.11",
     "react": "19.1.0",

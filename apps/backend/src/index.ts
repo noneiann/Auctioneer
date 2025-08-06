@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/AuthRoutes";
+import auctionRoutes from "./routes/AuctionRoutes";
 import * as fs from "fs";
 
 const app = express();
@@ -14,7 +15,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/auth", authRoutes);
-
+app.use("/auctions", auctionRoutes);
 app.listen(4000, () => {
 	console.log("Backend running at http://localhost:4000");
 });
