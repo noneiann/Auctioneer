@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "dotenv": "^17.2.0",
+    "keen-slider": "^6.8.6",
     "zustand": "^5.0.6"
   }
 }
