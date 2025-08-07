@@ -5,8 +5,6 @@ import ItemCard from "@/components/ItemCard";
 import CategorySidebar from "@/components/CategorySidebar";
 import Carousel from "@/components/HeroCarousel";
 import Breadcrumb from "@/components/Breadcrumb";
-import { Button } from "@headlessui/react";
-import { Plus } from "lucide-react";
 
 export default function AuctionsPage() {
 	return (
