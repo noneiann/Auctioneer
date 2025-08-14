@@ -60,6 +60,7 @@ model auction {
 
   ownerId      String
   owner        user       @relation("UserAuctions", fields: [ownerId], references: [id])
+  estimatedValue Float?    
 
   itemId       String     @unique
   item         item       @relation(fields: [itemId], references: [id])
