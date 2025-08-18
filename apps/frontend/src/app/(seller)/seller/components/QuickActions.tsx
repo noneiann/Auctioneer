@@ -7,7 +7,7 @@ const quickActions = [
 		title: "Create Auction",
 		description: "Start a new auction for your item",
 		icon: Hammer,
-		href: "/seller/auction/create",
+		href: "/seller/auctions/create",
 		color: "bg-main",
 	},
 	{

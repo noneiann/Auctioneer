@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ItemType } from "@auctioneer/types";
+import useAuctions from "@/hooks/useAuctions";
 
 interface CreateAuctionFormData {
 	// Item fields
@@ -27,6 +28,7 @@ interface CreateAuctionFormData {
 }
 
 export default function CreateAuctionForm() {
+	const { createAuction } = useAuctions();
 	const router = useRouter();
 	const { user } = useAuth();
 	const [isLoading, setIsLoading] = useState(false);
@@ -96,37 +98,16 @@ export default function CreateAuctionForm() {
 		}
 
 		try {
-			const token = localStorage.getItem("token");
-			if (!token) {
-				throw new Error("No authentication token found");
-			}
-
-			const response = await fetch("http://localhost:4000/auctions", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({
-					// Item data
-					title: form.title,
-					description: form.description,
-					imageUrl: form.imageUrl,
-					type: form.type,
-					price: parseFloat(form.price) || 0,
-
-					// Auction data
-					startingBid: parseFloat(form.startingBid),
-					startTime: startDate.toISOString(),
-					endTime: endDate.toISOString(),
-				}),
+			await createAuction({
+				title: form.title,
+				description: form.description,
+				imageUrl: form.imageUrl,
+				type: form.type,
+				price: parseFloat(form.price) || 0,
+				startingBid: parseFloat(form.startingBid),
+				startTime: startDate.toISOString(),
+				endTime: endDate.toISOString(),
 			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.data || "Failed to create auction");
-			}
 
 			router.push("/auctions");
 		} catch (err: any) {
@@ -137,7 +118,7 @@ export default function CreateAuctionForm() {
 	};
 
 	return (
-		<div className='max-w-2xl mx-auto my-12 p-8 bg-white dark:bg-gray-900 rounded-lg shadow-sm'>
+		<div className='w-full shadow-sm'>
 			<h1 className='text-3xl font-light mb-8 text-gray-800 dark:text-gray-100'>
 				Create New Auction
 			</h1>
@@ -167,7 +148,7 @@ export default function CreateAuctionForm() {
 								value={form.title}
 								onChange={handleChange}
 								placeholder="E.g., 'Vintage Camera' or 'Gaming Laptop'"
-								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 								required
 							/>
 						</div>
@@ -182,7 +163,7 @@ export default function CreateAuctionForm() {
 								value={form.description}
 								onChange={handleChange}
 								placeholder='Detailed description of the item'
-								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200 min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 								required
 							/>
 						</div>
@@ -198,7 +179,7 @@ export default function CreateAuctionForm() {
 									value={imageInput}
 									onChange={(e) => setImageInput(e.target.value)}
 									placeholder='Enter image URL'
-									className='flex-1 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+									className='flex-1 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200'
 								/>
 								<button
 									type='button'
@@ -215,7 +196,7 @@ export default function CreateAuctionForm() {
 											<img
 												src={url}
 												alt={`Item ${index + 1}`}
-												className='w-full h-20 object-cover rounded-md border border-gray-200 dark:border-gray-700'
+												className='w-full h-full object-cover rounded-md border border-gray-200 dark:border-gray-700'
 												onError={(e) => {
 													(e.target as HTMLImageElement).src =
 														"https://via.placeholder.com/80?text=Error";
@@ -242,7 +223,7 @@ export default function CreateAuctionForm() {
 									name='type'
 									value={form.type}
 									onChange={handleChange}
-									className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+									className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200'
 									required>
 									<option value='AUCTION'>Auction</option>
 									<option value='DIRECT'>Direct Sale</option>
@@ -261,7 +242,7 @@ export default function CreateAuctionForm() {
 									value={form.price}
 									onChange={handleChange}
 									placeholder='0.00'
-									className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+									className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200'
 									min='0'
 									step='0.01'
 								/>
@@ -287,7 +268,7 @@ export default function CreateAuctionForm() {
 							value={form.startingBid}
 							onChange={handleChange}
 							placeholder='Minimum bid amount'
-							className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+							className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200'
 							required
 							min='0'
 							step='0.01'
@@ -305,7 +286,7 @@ export default function CreateAuctionForm() {
 								name='startTime'
 								value={form.startTime}
 								onChange={handleChange}
-								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200'
 								required
 							/>
 						</div>
@@ -320,7 +301,7 @@ export default function CreateAuctionForm() {
 								name='endTime'
 								value={form.endTime}
 								onChange={handleChange}
-								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+								className='w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200'
 								required
 							/>
 						</div>

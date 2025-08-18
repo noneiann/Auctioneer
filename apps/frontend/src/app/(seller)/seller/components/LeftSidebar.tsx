@@ -27,7 +27,7 @@ const menuSections = [
 	{
 		title: "Actions",
 		items: [
-			{ name: "Make Auction", href: "/seller/auction/create", icon: Hammer },
+			{ name: "Make Auction", href: "/seller/auctions/create", icon: Hammer },
 			{ name: "Sell Item", href: "/seller/items/sell", icon: DollarSign },
 			{ name: "Barter Item", href: "/seller/items/barter", icon: RefreshCw },
 		],
@@ -70,7 +70,9 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
 			<div className='p-4 border-b border-foreground/10'>
 				<div className='flex  items-center justify-between'>
 					{!collapsed && (
-						<Link href='/' className='flex flex-row items-center space-x-2'>
+						<Link
+							href='/seller'
+							className='flex flex-row items-center space-x-2'>
 							<Image
 								src='/logo.svg'
 								alt='Auctioneer Logo'
@@ -119,12 +121,17 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
 										<Link
 											key={itemIndex}
 											href={item.href}
-											className={`flex items-center px-3 py-2 rounded-lg transition-colors group relative ${
+											className={`flex items-center px-3 py-3 rounded-lg transition-colors group relative ${
 												pathname === item.href
 													? "bg-main text-white"
 													: "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
 											}`}>
-											<IconComponent size={18} className='mr-3' />
+											{collapsed && (
+												<IconComponent size={18} className='self-center' />
+											)}
+											{!collapsed && (
+												<IconComponent size={18} className='mr-2' />
+											)}
 											{!collapsed && (
 												<span className='text-sm font-medium'>{item.name}</span>
 											)}

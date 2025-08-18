@@ -1,5 +1,7 @@
-import { ApiRequest, ApiResponse, User } from "@auctioneer/types";
-type CreateAuctionBody = {
+// services/auctionApi.ts
+import { ApiResponse } from "@auctioneer/types";
+
+export type CreateAuctionBody = {
 	title: string;
 	description: string;
 	imageUrl: string[];
@@ -8,4 +10,65 @@ type CreateAuctionBody = {
 	startTime: string; // ISO date string
 	endTime: string; // ISO date string
 	startingBid: number;
+};
+
+// Helper function to get token from Zustand persist storage
+function getAuthToken(): string | null {
+	try {
+		const authStorage = localStorage.getItem("auth-storage");
+		if (authStorage) {
+			const parsed = JSON.parse(authStorage);
+			return parsed.state?.token || null;
+		}
+		return null;
+	} catch (error) {
+		console.error("Error parsing auth storage:", error);
+		return null;
+	}
+}
+
+async function createAuction(
+	body: CreateAuctionBody
+): Promise<ApiResponse<any>> {
+	const token = getAuthToken();
+
+	const res = await fetch("http://localhost:4000/auctions", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			...(token && { Authorization: `Bearer ${token}` }),
+		},
+		body: JSON.stringify(body),
+	});
+
+	const data = await res.json();
+
+	if (!res.ok) {
+		throw new Error(data.data || "Failed to create auction");
+	}
+
+	return data;
+}
+
+async function getAuctions(): Promise<ApiResponse<any>> {
+	const token = getAuthToken();
+
+	const res = await fetch("http://localhost:4000/auctions", {
+		headers: {
+			...(token && { Authorization: `Bearer ${token}` }),
+		},
+	});
+
+	const data = await res.json();
+
+	if (!res.ok) {
+		throw new Error(data.data || "Failed to fetch auctions");
+	}
+
+	return data;
+}
+
+export const auctionApi = {
+	createAuction,
+	getAuctions,
 };
