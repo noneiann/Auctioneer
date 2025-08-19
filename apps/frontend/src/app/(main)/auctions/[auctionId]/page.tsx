@@ -1,97 +1,49 @@
 "use client";
-
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight, Clock, DollarSign } from "lucide-react";
 
-const autoSlideDelay = 4000;
-
-type AuctionItem = {
+// Auction type
+type Auction = {
   id: string;
-  itemName: string;
-  description: string;
-  images: string[];
-  currentBid: number;
-  endDate: string;
+  startTime: string;
+  endTime: string;
+  startingBid: number;
   category: string;
-};
-
-const mockAuction = {
-  id: "abc123",
-  startTime: new Date("2025-07-25T10:00:00Z"),
-  endTime: new Date("2025-08-01T10:00:00Z"),
-  startingBid: 5000,
-  currentBid: 6395,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-
-  ownerId: "user123",
-  owner: {
-    id: "user123",
-    name: "Seller Joe",
-    // Add other user fields as needed
-  },
-
-  itemId: "item123",
+  currentBid: number;
   item: {
-    id: "item123",
-    name: "Air Jordan 1 Low",
-    description:
-      "A premium, iconic sneaker featuring a black, white, and orange colorway. Lightweight and durable for everyday wear.",
-    imageUrl: [
-      "https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco,u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/3f0a3ad8-dee0-4549-87d8-ee993bb11a99/AIR+JORDAN+1+LOW.png",
-      "https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco,u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/6c965abe-1f03-4fd8-8c6d-e47fe314bd05/AIR+JORDAN+1+LOW.png",
-      "https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco,u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/07780859-2650-4a8d-bac3-49c47f669a5b/AIR+JORDAN+1+LOW.png",
-      "https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco,u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/b308e079-84eb-4f88-9896-8e4bb9282b42/AIR+JORDAN+1+LOW.png",
-      "https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco,u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/94598164-029f-409c-946a-c058dc936cac/AIR+JORDAN+1+LOW.png",
-    ],
-    type: "AUCTION",
-    price: null,
-    status: "AVAILABLE",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ownerId: "user123",
-    owner: {
-      id: "user123",
-      name: "Seller Joe",
-    },
-  },
-
-  bids: [
-    {
-      id: "bid1",
-      amount: 5900,
-      createdAt: new Date("2025-07-29T12:00:00Z"),
-      bidderId: "user789",
-      bidder: {
-        id: "user789",
-        name: "Jane Doe",
-      },
-    },
-    {
-      id: "bid2",
-      amount: 6395,
-      createdAt: new Date("2025-07-30T15:30:00Z"),
-      bidderId: "user456",
-      bidder: {
-        id: "user456",
-        name: "John Smith",
-      },
-    },
-  ],
+    id: string;
+    name: string;
+    description: string;
+    imageUrl: string[];
+    type: string;
+  };
+  bids: {
+    id: string;
+    amount: number;
+    bidder: { id: string; name: string } | null;
+    createdAt: string;
+  }[];
 };
 
-export default function AuctionInfo() {
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState("");
-  const [showBidInput, setShowBidInput] = useState(false);
-  const [bidAmount, setBidAmount] = useState(mockAuction.currentBid);
-  const highestBid = mockAuction.bids.reduce(
-    (max, b) => (b.amount > max.amount ? b : max),
-    mockAuction.bids[0]
-  );
+export default function AuctionInfoPage() {
+  const params = useParams();
+  const id = Array.isArray(params.auctionId)
+    ? params.auctionId[0]
+    : params.auctionId;
 
+  const [auction, setAuction] = useState<Auction | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showBidInput, setShowBidInput] = useState(false);
+  const [bidAmount, setBidAmount] = useState<number>(0);
+  const [error, setError] = useState<string>("");
+
+  // Slider
   const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
     initial: 0,
     loop: true,
@@ -100,48 +52,101 @@ export default function AuctionInfo() {
     },
   });
 
+  // Fetch auction data
   useEffect(() => {
-    const interval = setInterval(() => {
-      instanceRef.current?.next();
-    }, autoSlideDelay);
-    return () => clearInterval(interval);
-  }, []);
+    const fetchAuction = async () => {
+      try {
+        if (!id) return;
+        const token = getTokenFromStorage();
+        if (!token) return;
 
+        const res = await fetch(`http://localhost:4000/auctions/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) throw new Error("Auction not found");
+
+        const data = await res.json();
+        setAuction(data.data);
+        setBidAmount(data.data.currentBid);
+      } catch (err) {
+        console.error("Failed to fetch auction:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAuction();
+  }, [id]);
+
+  function getTokenFromStorage(): string | null {
+    const stored = localStorage.getItem("auth-storage");
+    if (!stored) return null;
+    try {
+      const parsed = JSON.parse(stored);
+      return parsed?.state?.token ?? null;
+    } catch (err) {
+      console.error("Failed to parse auth-storage", err);
+      return null;
+    }
+  }
+
+  // Countdown timer
   useEffect(() => {
+    if (!auction) return;
     const interval = setInterval(() => {
       const now = new Date().getTime();
-      const end = new Date(mockAuction.endTime).getTime();
+      const end = new Date(auction.endTime).getTime();
       const diff = end - now;
-
       if (diff <= 0) {
         setTimeLeft("Auction ended");
         clearInterval(interval);
         return;
       }
-
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
-
       setTimeLeft(
         `${days > 0 ? `${days}d ` : ""}${hours}h ${minutes}m ${seconds}s`
       );
     }, 1000);
-
     return () => clearInterval(interval);
-  }, []);
+  }, [auction]);
 
-  // Handle bid increment
+  // Bid logic
   const handleIncrement = (amount: number) => {
     setBidAmount((prev) => prev + amount);
   };
 
-  // Handle submit (dummy)
-  const handleSubmitBid = () => {
-    alert(`Submitted bid: ₱${bidAmount.toLocaleString()}`);
-    setShowBidInput(false); // Close input
+  const handleBid = () => {
+    if (!auction) return null;
+
+    if (bidAmount < minAllowedBid) {
+      setError(`Your bid must be at least ₱${minAllowedBid.toLocaleString()}`);
+      return;
+    }
+
+    setError("");
+
+    // Placeholder logic: update local state only
+    setAuction((prev: any) =>
+      prev ? { ...prev, currentBid: bidAmount } : prev
+    );
+
+    alert(`✅ Bid placed: ₱${bidAmount.toLocaleString()}`);
+    setBidAmount(0);
   };
+
+  if (loading) return <p className="p-6">Loading auction...</p>;
+  if (!auction) return <p className="p-6">Auction not found.</p>;
+  const minAllowedBid = Math.max(auction.startingBid, auction.currentBid);
+
+  const highestBid = auction.bids.length
+    ? auction.bids.reduce(
+        (max, b) => (b.amount > max.amount ? b : max),
+        auction.bids[0]
+      )
+    : null;
 
   return (
     <div className="max-w-6xl mx-auto p-6 animate-fade-in">
@@ -155,21 +160,18 @@ export default function AuctionInfo() {
           Auctions
         </Link>{" "}
         {">"}{" "}
-        <span className="text-gray-700 font-medium">
-          {mockAuction.item.name}
-        </span>
+        <span className="text-gray-700 font-medium">{auction.item.name}</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Image Section */}
         <div className="flex gap-4">
+          {/* Thumbnails */}
           <div className="flex flex-col gap-2 overflow-y-auto max-h-[500px]">
-            {mockAuction.item.imageUrl.map((img, i) => (
+            {auction.item.imageUrl.map((img, i) => (
               <button
                 key={i}
-                onClick={() => {
-                  instanceRef.current?.moveToIdx(i);
-                }}
+                onClick={() => instanceRef.current?.moveToIdx(i)}
                 className={`w-20 h-20 rounded-md overflow-hidden border ${
                   selectedIndex === i
                     ? "border-main"
@@ -185,12 +187,13 @@ export default function AuctionInfo() {
             ))}
           </div>
 
+          {/* Main Carousel */}
           <div className="flex-1 rounded-xl overflow-hidden relative">
             <div
               ref={sliderRef}
               className="keen-slider rounded-xl aspect-square"
             >
-              {mockAuction.item.imageUrl.map((img, i) => (
+              {auction.item.imageUrl.map((img, i) => (
                 <div key={i} className="keen-slider__slide">
                   <img
                     src={img}
@@ -203,7 +206,7 @@ export default function AuctionInfo() {
 
             {/* Dots */}
             <div className="absolute bottom-3 w-full flex justify-center gap-2">
-              {mockAuction.item.imageUrl.map((_, i) => (
+              {auction.item.imageUrl.map((_, i) => (
                 <div
                   key={i}
                   className={`w-2.5 h-2.5 rounded-full ${
@@ -212,30 +215,49 @@ export default function AuctionInfo() {
                 ></div>
               ))}
             </div>
+
+            {/* Controls */}
+            <button
+              onClick={() => instanceRef.current?.prev()}
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={() => instanceRef.current?.next()}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
         </div>
 
         {/* Item Info Section */}
         <div className="flex flex-col gap-4">
-          <h1 className="text-3xl font-bold">{mockAuction.item.name}</h1>
+          <h1 className="text-3xl font-bold">{auction.item.name}</h1>
           <span className="text-sm text-gray-500 capitalize">
-            Category: {mockAuction.item.type}
+            Category: {auction.category}
           </span>
           <p className="text-base text-gray-700 dark:text-gray-300">
-            {mockAuction.item.description}
+            {auction.item.description}
           </p>
 
+          {/* Current Bid + Timer */}
           <div className="bg-gray-100 dark:bg-[#222] p-4 rounded-md mt-4">
             <div className="text-xl font-semibold">
-              Current Bid:{" "}
-              <span className="text-main font-bold">
-                ₱{mockAuction.currentBid.toLocaleString()}
+              <DollarSign className="inline mr-1 text-green-500" />
+              Current Bid:
+              <span className="text-main font-bold ml-2">
+                ₱{auction.currentBid.toLocaleString()}
               </span>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Bidder: {highestBid.bidder.name}
-            </div>
+            {highestBid && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Bidder: {highestBid.bidder?.name ?? "Anonymous"}
+              </div>
+            )}
             <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              <Clock className="inline mr-1 text-red-500" />
               Ends in: {timeLeft}
             </div>
           </div>
@@ -257,11 +279,13 @@ export default function AuctionInfo() {
                 </label>
                 <input
                   type="number"
-                  value={bidAmount}
+                  value={bidAmount || ""}
                   onChange={(e) => setBidAmount(Number(e.target.value))}
-                  className="w-full border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--main)] text-sm bg-transparent text-[var(--foreground)] "
-                  min={mockAuction.currentBid}
+                  className="w-full border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--main)] text-sm bg-transparent text-[var(--foreground)]"
+                  min={minAllowedBid}
+                  placeholder={`Min ₱${minAllowedBid.toLocaleString()}`}
                 />
+                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
               </div>
 
               {/* Quick Increments */}
@@ -277,15 +301,37 @@ export default function AuctionInfo() {
                 ))}
               </div>
 
-              {/* Submit Button */}
+              {/* Submit */}
               <button
-                onClick={handleSubmitBid}
+                onClick={handleBid}
                 className="w-full bg-main text-white py-2 px-4 rounded-lg text-sm font-semibold bg-main-hover transition cursor-pointer"
               >
                 Submit Bid
               </button>
             </div>
           )}
+
+          {/* Bid History */}
+          <div>
+            <h2 className="text-xl font-semibold mb-3">Recent Bids</h2>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {auction.bids.length > 0 ? (
+                auction.bids.map((bid) => (
+                  <div
+                    key={bid.id}
+                    className="flex justify-between p-2 border rounded-md bg-gray-50 dark:bg-[#171717]"
+                  >
+                    <span>{bid.bidder?.name ?? "Anonymous"}</span>
+                    <span className="font-bold">
+                      ₱{bid.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500">No bids yet.</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

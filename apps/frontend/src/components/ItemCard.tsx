@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 type ItemCardProps = {
   id: string;
@@ -9,11 +9,19 @@ type ItemCardProps = {
   itemName: string;
   price: number | string;
   endDate: string; // ISO date string like "2025-08-01T12:00:00Z"
+  category: string;
 };
 
-const ItemCard: React.FC<ItemCardProps> = ({ id, image, itemName, price, endDate }) => {
+const ItemCard: React.FC<ItemCardProps> = ({
+  id,
+  image,
+  itemName,
+  price,
+  endDate,
+  category,
+}) => {
   const router = useRouter();
-  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [timeLeft, setTimeLeft] = useState<string>("");
 
   useEffect(() => {
     const updateTimer = () => {
@@ -22,7 +30,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ id, image, itemName, price, endDate
       const diff = end - now;
 
       if (diff <= 0) {
-        setTimeLeft('Auction ended');
+        setTimeLeft("Auction ended");
         return;
       }
 
@@ -32,7 +40,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ id, image, itemName, price, endDate
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
       setTimeLeft(
-        `${days > 0 ? `${days}d ` : ''}${hours}h ${minutes}m ${seconds}s`
+        `${days > 0 ? `${days}d ` : ""}${hours}h ${minutes}m ${seconds}s`
       );
     };
 
@@ -47,21 +55,18 @@ const ItemCard: React.FC<ItemCardProps> = ({ id, image, itemName, price, endDate
   };
 
   return (
-    <div
-      className='flex flex-col gap-1 cursor-pointer'
-      onClick={handleClick}
-    >
+    <div className="flex flex-col gap-1 cursor-pointer" onClick={handleClick}>
       {/* Item Image */}
-      <div className='w-50 rounded-md'>
+      <div className="w-50 rounded-md">
         <img
           src={image}
           alt={itemName}
-          className='rounded-md aspect-square object-cover'
+          className="rounded-md aspect-square object-cover"
         />
       </div>
 
       {/* Item Details */}
-      <div className='flex flex-col gap-1'>
+      <div className="flex flex-col gap-1">
         <div>
           <span>{itemName}</span>
         </div>
@@ -71,8 +76,9 @@ const ItemCard: React.FC<ItemCardProps> = ({ id, image, itemName, price, endDate
           </span>
         </div>
         {/* Countdown Timer */}
-        <div className='text-sm text-gray-500'>
-          <span>Duration: </span>{timeLeft}
+        <div className="text-sm text-gray-500">
+          <span>Duration: </span>
+          {timeLeft}
         </div>
       </div>
     </div>
