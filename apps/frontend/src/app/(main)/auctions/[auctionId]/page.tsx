@@ -52,7 +52,6 @@ export default function AuctionInfoPage() {
     },
   });
 
-  // Fetch auction data
   useEffect(() => {
     const fetchAuction = async () => {
       try {
