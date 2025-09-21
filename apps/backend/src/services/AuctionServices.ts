@@ -142,6 +142,14 @@ const auctionServices = {
       throw new Error(error?.message || "Failed to delete auction");
     }
   },
+  
+  findHighestBid: async (auctionId: string) => {
+    const highest = await prisma.bid.findFirst({
+      where: { auctionId },
+      orderBy: { amount: "desc" }
+    });
+    return highest;
+  }, 
 };
 
 export default auctionServices;

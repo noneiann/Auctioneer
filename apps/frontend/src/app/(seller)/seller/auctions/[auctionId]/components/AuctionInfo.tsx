@@ -249,7 +249,7 @@ export default function AuctionInfo({ id }: AuctionInfoProps) {
               <p className="text-sm text-foreground/60">Current Bid</p>
               <p className="text-2xl font-bold text-green-600 flex items-center">
                 <DollarSign size={20} className="mr-1" />
-                {auction.currentBid || auction.startingBid}
+                {auction.currentBid ? auction.currentBid : "None"}
               </p>
             </div>
             <DollarSign className="text-green-600" size={24} />

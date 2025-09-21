@@ -67,6 +67,7 @@ model auction {
   item         item       @relation(fields: [itemId], references: [id])
 
   bids         bid[]
+  
 }
 
 model bid {
@@ -79,6 +80,8 @@ model bid {
 
   auctionId    String
   auction      auction    @relation(fields: [auctionId], references: [id])
+
+  @@index([auctionId, amount])
 }
 
 enum ItemType {

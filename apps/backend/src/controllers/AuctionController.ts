@@ -151,3 +151,17 @@ export const deleteAuction = async (
     return res.status(500).json({ success: false, data: "Server error" });
   }
 };
+
+export const findHighestBid = async (
+  req: Request<{ auctionId: string }>,
+  res: Response<ApiResponse<any>>
+) => {
+  try {
+    const { auctionId } = req.params;
+    const highestBid = await auctionServices.findHighestBid(auctionId);
+    return res.json({ success: true, data: highestBid });
+  } catch (error: any) {
+    console.error("Error finding highest bid:", error);
+    return res.status(500).json({ success: false, data: "Server error" });
+  }
+};

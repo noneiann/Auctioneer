@@ -2,27 +2,28 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Calendar,
-  Clock,
   DollarSign,
   FileText,
   Image,
   Tag,
+  Package,
+  Layers,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ItemType } from "@auctioneer/types";
 import useAuctions from "@/hooks/useAuctions";
+import DateTimePicker from "@/components/DateTimePicker";
+import AnimatedInput from "@/components/AnimatedInput";
+import AnimatedTextarea from "@/components/AnimatedTextarea";
+import AnimatedSelect from "@/components/AnimatedSelect";
 
 interface CreateAuctionFormData {
-  // Item fields
   title: string;
   description: string;
   imageUrl: string[];
   type: ItemType;
   price: string;
   category: string;
-
-  // Auction fields
   startingBid: string;
   startTime: string;
   endTime: string;
@@ -34,6 +35,19 @@ export default function CreateAuctionForm() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Set default start time to current time + 1 hour, end time to start time + 24 hours
+  const getDefaultStartTime = () => {
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    return now.toISOString();
+  };
+
+  const getDefaultEndTime = () => {
+    const now = new Date();
+    now.setHours(now.getHours() + 25); // 1 hour from now + 24 hours
+    return now.toISOString();
+  };
+
   const [form, setForm] = useState<CreateAuctionFormData>({
     title: "",
     description: "",
@@ -41,8 +55,8 @@ export default function CreateAuctionForm() {
     type: "AUCTION" as ItemType,
     price: "",
     startingBid: "",
-    startTime: "",
-    endTime: "",
+    startTime: getDefaultStartTime(),
+    endTime: getDefaultEndTime(),
     category: "",
   });
 
@@ -92,6 +106,13 @@ export default function CreateAuctionForm() {
 
     const startDate = new Date(form.startTime);
     const endDate = new Date(form.endTime);
+    const now = new Date();
+
+    if (startDate <= now) {
+      setError("Start time must be in the future");
+      setIsLoading(false);
+      return;
+    }
 
     if (endDate <= startDate) {
       setError("End time must be after start time");
@@ -114,7 +135,7 @@ export default function CreateAuctionForm() {
 
       router.push("/auctions");
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message ?? "Failed to create auction");
     } finally {
       setIsLoading(false);
     }
@@ -122,94 +143,79 @@ export default function CreateAuctionForm() {
 
   return (
     <div className="w-full shadow-sm">
-      <h1 className="text-3xl font-light mb-8 text-gray-800 dark:text-gray-100">
-        Create New Auction
+      <h1 className="text-2xl font-medium mb-6 text-gray-800 dark:text-gray-100">
+        Create Auction
       </h1>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400">
-          {error}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Item Information */}
-        <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+        <div className="pb-4">
           <h2 className="text-lg font-medium mb-4 text-gray-700 dark:text-gray-300">
             Item Information
           </h2>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                <Tag size={16} className="mr-2" />
-                Item Name
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="E.g., 'Vintage Camera' or 'Gaming Laptop'"
-                className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
+            <AnimatedInput
+              label="Item Name"
+              value={form.title}
+              onChange={(value) => setForm({ ...form, title: value })}
+              icon={Tag}
+              placeholder="e.g., Vintage Camera"
+              required
+              name="title"
+            />
 
-            <div className="space-y-2">
-              <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                <FileText size={16} className="mr-2" />
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                placeholder="Detailed description of the item"
-                className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200 min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
+            <AnimatedTextarea
+              label="Description"
+              value={form.description}
+              onChange={(value) => setForm({ ...form, description: value })}
+              icon={FileText}
+              placeholder="Describe your item in detail..."
+              required
+              name="description"
+              maxLength={500}
+            />
 
-            <div className="space-y-2">
-              <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+            <div>
+              <label className="flex items-center text-sm text-gray-600 dark:text-gray-300 mb-3">
                 <Image size={16} className="mr-2" />
                 Images
               </label>
-              <div className="flex space-x-2">
-                <input
+              <div className="flex gap-2 mb-3">
+                <AnimatedInput
+                  label="Image URL"
                   type="url"
                   value={imageInput}
-                  onChange={(e) => setImageInput(e.target.value)}
-                  placeholder="Enter image URL"
-                  className="flex-1 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200"
+                  onChange={setImageInput}
+                  placeholder="https://example.com/image.jpg"
+                  className="flex-1"
                 />
                 <button
                   type="button"
                   onClick={addImageUrl}
-                  className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="px-4 py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 transform hover:scale-105 active:scale-95"
                 >
                   Add
                 </button>
               </div>
 
               {form.imageUrl.length > 0 && (
-                <div className="mt-3 grid grid-cols-4 gap-2">
+                <div className="mt-3 grid grid-cols-3 gap-3">
                   {form.imageUrl.map((url, index) => (
-                    <div key={index} className="relative group">
+                    <div key={index} className="relative group rounded-md overflow-hidden">
                       <img
                         src={url}
                         alt={`Item ${index + 1}`}
-                        className="w-full h-full object-cover rounded-md border border-gray-200 dark:border-gray-700"
+                        className="w-full h-24 object-cover border border-gray-200 dark:border-gray-700"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
-                            "https://via.placeholder.com/80?text=Error";
+                            "https://via.placeholder.com/96?text=Error";
                         }}
                       />
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         ×
                       </button>
@@ -219,132 +225,113 @@ export default function CreateAuctionForm() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm text-gray-600 dark:text-gray-300">
-                  Type
-                </label>
-                <select
-                  name="type"
-                  value={form.type}
-                  onChange={handleChange}
-                  className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200"
-                  required
-                >
-                  <option value="AUCTION">Auction</option>
-                  <option value="DIRECT">Direct Sale</option>
-                  <option value="BARTER">Barter</option>
-                </select>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <AnimatedSelect
+                label="Type"
+                value={form.type}
+                onChange={(value) => setForm({ ...form, type: value as ItemType })}
+                icon={Package}
+                required
+                name="type"
+                options={[
+                  { value: "AUCTION", label: "Auction" },
+                  { value: "DIRECT", label: "Direct Sale" },
+                  { value: "BARTER", label: "Barter" },
+                ]}
+              />
 
-              <div className="space-y-2">
-                <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                  <Tag size={16} className="mr-2" />
-                  Category
-                </label>
-                <select
-                  name="category"
-                  value={form.category}
-                  onChange={handleChange}
-                  className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200"
-                  required
-                >
-                  <option value="">Select a category</option>
-                  <option value="Shoes">Shoes</option>
-                  <option value="Watches">Watches</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Clothing">Clothing</option>
-                  <option value="Collectibles">Collectibles</option>
-                  <option value="Art">Art</option>
-                  <option value="Books">Books</option>
-                  <option value="Sports Equipment">Sports Equipment</option>
-                </select>
-              </div>
+              <AnimatedSelect
+                label="Category"
+                value={form.category}
+                onChange={(value) => setForm({ ...form, category: value })}
+                icon={Layers}
+                required
+                name="category"
+                options={[
+                  { value: "Shoes", label: "Shoes" },
+                  { value: "Watches", label: "Watches" },
+                  { value: "Electronics", label: "Electronics" },
+                  { value: "Clothing", label: "Clothing" },
+                  { value: "Collectibles", label: "Collectibles" },
+                  { value: "Art", label: "Art" },
+                  { value: "Books", label: "Books" },
+                  { value: "Sports Equipment", label: "Sports Equipment" },
+                ]}
+              />
 
-              <div className="space-y-2">
-                <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                  <DollarSign size={16} className="mr-2" />
-                  Estimated Value
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={form.price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
+              <AnimatedInput
+                label="Estimated Value"
+                type="number"
+                value={form.price}
+                onChange={(value) => setForm({ ...form, price: value })}
+                icon={DollarSign}
+                placeholder="0.00"
+                name="price"
+                min="0"
+                step="0.01"
+              />
+
+              <AnimatedInput
+                label="Starting Bid"
+                type="number"
+                value={form.startingBid}
+                onChange={(value) => setForm({ ...form, startingBid: value })}
+                icon={DollarSign}
+                placeholder="0.00"
+                required
+                name="startingBid"
+                min="0"
+                step="0.01"
+              />
             </div>
           </div>
         </div>
 
         {/* Auction Settings */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-            Auction Settings
-          </h2>
+        <div className="pb-4">
+          <h2 className="text-lg font-medium mb-4 text-gray-700 dark:text-gray-300">Auction Settings</h2>
 
-          <div className="space-y-2">
-            <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-              <DollarSign size={16} className="mr-2" />
-              Starting Bid
-            </label>
-            <input
-              type="number"
-              name="startingBid"
-              value={form.startingBid}
-              onChange={handleChange}
-              placeholder="Minimum bid amount"
-              className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200"
+          <div className="grid grid-cols-2 gap-4">
+            <DateTimePicker
+              value={form.startTime}
+              onChange={(value) => setForm({ ...form, startTime: value })}
+              label="Start Time"
+              placeholder="Select start date and time"
               required
-              min="0"
-              step="0.01"
+              minDate={new Date().toISOString().split('T')[0]} // Today's date only
             />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                <Calendar size={16} className="mr-2" />
-                Start Time
-              </label>
-              <input
-                type="datetime-local"
-                name="startTime"
-                value={form.startTime}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                <Clock size={16} className="mr-2" />
-                End Time
-              </label>
-              <input
-                type="datetime-local"
-                name="endTime"
-                value={form.endTime}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-[#171717] text-gray-800 dark:text-gray-200"
-                required
-              />
-            </div>
+            <DateTimePicker
+              value={form.endTime}
+              onChange={(value) => setForm({ ...form, endTime: value })}
+              label="End Time"
+              placeholder="Select end date and time"
+              required
+              minDate={form.startTime ? new Date(form.startTime).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+            />
           </div>
         </div>
 
-        <div className="pt-4">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div>
           <button
             type="submit"
             disabled={isLoading || !user}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors duration-200 flex items-center justify-center"
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
           >
-            {isLoading ? "Creating Auction..." : "Create Auction"}
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                Creating...
+              </>
+            ) : (
+              "Create Auction"
+            )}
           </button>
         </div>
       </form>
