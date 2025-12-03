@@ -11,8 +11,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
+
 
 model user {
   id          String    @id @default(cuid())
@@ -61,7 +61,7 @@ model auction {
   ownerId      String
   owner        user       @relation("UserAuctions", fields: [ownerId], references: [id])
   estimatedValue Float?    
-  category     String
+  category     String     @default("other")
 
   itemId       String     @unique
   item         item       @relation(fields: [itemId], references: [id])
