@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Poppins, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Navbar from "@/components/Navbar";
+import Header from "@/components/layout/Header";
+import Navbar from "@/components/layout/Navbar";
+import { SocketProvider } from "@/contexts/SocketContext";
 
 const poppins = Poppins({
 	variable: "--font-poppins",
@@ -28,7 +29,7 @@ export default function RootLayout({
 	return (
 		<html lang='en'>
 			<body className={`${poppins.variable} ${poppins.variable} antialiased`}>
-				{children}
+				<SocketProvider>{children}</SocketProvider>
 			</body>
 		</html>
 	);

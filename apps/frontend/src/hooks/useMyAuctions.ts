@@ -5,26 +5,28 @@ import {
 	UpdateAuctionBody,
 } from "@/lib/AuctionApi";
 import { ApiResponse } from "@auctioneer/types";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function useAuctions() {
+// Hook for fetching user's own auctions (seller dashboard)
+export default function useMyAuctions() {
 	const [data, setData] = useState<any[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
+	const fetchAuctions = async () => {
 		setLoading(true);
-		auctionApi
-			.getAuctions()
-			.then((response) => {
-				setData(response.data);
-			})
-			.catch((err) => {
-				setError(err.message);
-			})
-			.finally(() => {
-				setLoading(false);
-			});
+		try {
+			const response = await auctionApi.getMyAuctions();
+			setData(response.data);
+		} catch (err: any) {
+			setError(err.message);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		fetchAuctions();
 	}, []);
 
 	const createAuction = async (
@@ -34,7 +36,7 @@ export default function useAuctions() {
 
 		try {
 			const response = await auctionApi.createAuction(body);
-			setData((prev) => [...prev, response.data]);
+			setData((prev) => [response.data, ...prev]); // Add to beginning (newest first)
 			return response;
 		} catch (err: any) {
 			setError(err.message);
@@ -79,5 +81,13 @@ export default function useAuctions() {
 		}
 	};
 
-	return { data, loading, error, createAuction, updateAuction, deleteAuction };
+	return {
+		data,
+		loading,
+		error,
+		refetch: fetchAuctions,
+		createAuction,
+		updateAuction,
+		deleteAuction,
+	};
 }

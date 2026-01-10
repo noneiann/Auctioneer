@@ -1,0 +1,1484 @@
+\documentclass[12pt,a4paper]{report}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, backgrounds}
+
+% Colors
+\definecolor{primary}{HTML}{3B82F6}
+\definecolor{secondary}{HTML}{10B981}
+\definecolor{accent}{HTML}{F59E0B}
+\definecolor{danger}{HTML}{EF4444}
+\definecolor{codebg}{HTML}{F3F4F6}
+\definecolor{codetext}{HTML}{1F2937}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    filecolor=primary,
+    urlcolor=primary,
+    citecolor=primary,
+    pdftitle={Auctioneer - Technical Documentation},
+    pdfauthor={Auctioneer Development Team},
+}
+
+% Code listing style
+\lstdefinestyle{codestyle}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small\color{codetext},
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{gray!30},
+    xleftmargin=0.5cm,
+    xrightmargin=0.5cm,
+}
+\lstset{style=codestyle}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{Auctioneer}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Title formatting
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries\color{primary}}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titleformat{\section}
+{\normalfont\Large\bfseries\color{primary}}{\thesection}{1em}{}
+\titleformat{\subsection}
+{\normalfont\large\bfseries\color{secondary}}{\thesubsection}{1em}{}
+
+% Document info
+\title{
+    \vspace{-2cm}
+    {\Huge\textbf{\textcolor{primary}{Auctioneer}}}\\[0.5cm]
+    {\Large Technical Documentation}\\[0.3cm]
+    {\large Real-Time Auction Platform}\\[1cm]
+    \rule{\textwidth}{0.4pt}
+}
+\author{Auctioneer Development Team}
+\date{January 2026 \\ Version 1.0}
+
+\begin{document}
+
+% Title page
+\maketitle
+\thispagestyle{empty}
+
+\vfill
+\begin{center}
+\textit{A comprehensive technical documentation for the Auctioneer web application,\\
+covering system architecture, implementation details, and deployment guidelines.}
+\end{center}
+\vfill
+
+\newpage
+
+% Table of Contents
+\tableofcontents
+\newpage
+
+% ============================================================================
+% CHAPTER 1: INTRODUCTION
+% ============================================================================
+\chapter{Introduction}
+
+\section{Project Overview}
+
+\textbf{Auctioneer} is a modern, real-time auction platform that enables users to buy and sell items through multiple transaction methods. The platform supports:
+
+\begin{itemize}
+    \item \textbf{Timed Auctions} -- Traditional auction format with live bidding
+    \item \textbf{Direct Sales} -- Fixed-price transactions for immediate purchase
+    \item \textbf{Bartering} -- Item-for-item exchange between users
+\end{itemize}
+
+The application is built with a focus on real-time interactions, providing users with instant updates on bids, messages, and notifications through WebSocket technology.
+
+\section{Key Features}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Feature} & \textbf{Description} \\
+\hline
+User Authentication & Secure JWT-based authentication with registration and login \\
+\hline
+Live Bidding & Real-time bid placement and updates via WebSocket \\
+\hline
+Auction Management & Full CRUD operations for auction listings \\
+\hline
+Real-time Chat & In-auction messaging between participants \\
+\hline
+Seller Dashboard & Comprehensive dashboard for managing listings \\
+\hline
+Responsive Design & Mobile-first design with dark/light mode support \\
+\hline
+\end{tabularx}
+\caption{Core Platform Features}
+\end{table}
+
+\section{Target Users}
+
+The platform serves three primary user roles:
+
+\begin{enumerate}
+    \item \textbf{Buyers} -- Browse auctions, place bids, purchase items, and communicate with sellers
+    \item \textbf{Sellers} -- Create listings, manage auctions, track bids, and handle transactions
+    \item \textbf{Guests} -- Browse public auctions without an account (view-only access)
+\end{enumerate}
+
+\section{Document Structure}
+
+This document is organized as follows:
+
+\begin{itemize}
+    \item \textbf{Chapter 2} -- System Architecture and Design
+    \item \textbf{Chapter 3} -- Technology Stack
+    \item \textbf{Chapter 4} -- Database Design
+    \item \textbf{Chapter 5} -- API Documentation
+    \item \textbf{Chapter 6} -- WebSocket Implementation
+    \item \textbf{Chapter 7} -- Frontend Architecture
+    \item \textbf{Chapter 8} -- Security Considerations
+    \item \textbf{Chapter 9} -- Deployment Guide
+    \item \textbf{Chapter 10} -- Future Roadmap
+\end{itemize}
+
+% ============================================================================
+% CHAPTER 2: SYSTEM ARCHITECTURE
+% ============================================================================
+\chapter{System Architecture}
+
+\section{High-Level Architecture}
+
+Auctioneer follows a modern three-tier architecture with clear separation of concerns:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    box/.style={rectangle, draw=primary, fill=primary!10, thick, minimum width=4cm, minimum height=1cm, align=center},
+    layer/.style={rectangle, draw=gray, dashed, thick, inner sep=0.5cm},
+]
+
+% Client Layer
+\node[box] (frontend) {Next.js Frontend\\(Port 3000)};
+
+% API Layer
+\node[box, below=of frontend] (backend) {Express Backend\\(Port 4000)};
+
+% Data Layer
+\node[box, below=of backend] (database) {PostgreSQL\\Database};
+
+% Arrows
+\draw[->, thick, primary] (frontend) -- node[right] {HTTP/REST} (backend);
+\draw[->, thick, secondary] (frontend.east) -- ++(1,0) |- node[right, pos=0.25] {WebSocket} (backend.east);
+\draw[->, thick, primary] (backend) -- node[right] {Prisma ORM} (database);
+
+% Labels
+\node[left=2cm of frontend, text=gray] {\textbf{Client Layer}};
+\node[left=2cm of backend, text=gray] {\textbf{API Layer}};
+\node[left=2cm of database, text=gray] {\textbf{Data Layer}};
+
+\end{tikzpicture}
+\caption{Three-Tier Architecture Overview}
+\end{figure}
+
+\section{Monorepo Structure}
+
+The project uses a monorepo architecture managed by Turborepo, enabling shared code and coordinated builds:
+
+\begin{lstlisting}[language=bash, caption=Project Directory Structure]
+Auctioneer/
+├── apps/
+│   ├── frontend/          # Next.js application
+│   │   ├── src/
+│   │   │   ├── app/       # App Router pages
+│   │   │   ├── components/# React components
+│   │   │   ├── hooks/     # Custom hooks
+│   │   │   ├── lib/       # API clients
+│   │   │   ├── stores/    # Zustand stores
+│   │   │   └── contexts/  # React contexts
+│   │   └── package.json
+│   │
+│   └── backend/           # Express API server
+│       ├── src/
+│       │   ├── controllers/
+│       │   ├── services/
+│       │   ├── middleware/
+│       │   ├── routes/
+│       │   └── websocket/
+│       └── package.json
+│
+├── packages/
+│   ├── db/                # Prisma database package
+│   │   ├── prisma/
+│   │   │   └── schema.prisma
+│   │   └── generated/
+│   │
+│   └── types/             # Shared TypeScript types
+│       └── src/
+│
+├── turbo.json             # Turborepo config
+└── package.json           # Root workspace config
+\end{lstlisting}
+
+\section{Data Flow}
+
+\subsection{REST API Flow}
+
+\begin{enumerate}
+    \item Client sends HTTP request with JWT token in Authorization header
+    \item Express middleware validates the token
+    \item Controller processes the request and calls appropriate service
+    \item Service interacts with database via Prisma ORM
+    \item Response is returned through the chain to the client
+\end{enumerate}
+
+\subsection{WebSocket Flow}
+
+\begin{enumerate}
+    \item Client establishes WebSocket connection with JWT token
+    \item Server authenticates and maintains connection
+    \item Client joins specific rooms (auction rooms, chat rooms)
+    \item Events are broadcast to all room participants in real-time
+    \item Connection cleanup occurs on disconnect
+\end{enumerate}
+
+\section{Design Patterns}
+
+The application employs several design patterns:
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Pattern} & \textbf{Location} & \textbf{Purpose} \\
+\hline
+MVC & Backend & Separation of routes, controllers, and services \\
+\hline
+Repository & Services & Data access abstraction \\
+\hline
+Observer & WebSocket & Real-time event broadcasting \\
+\hline
+Singleton & Prisma Client & Single database connection instance \\
+\hline
+Context & Frontend & Global state distribution (Socket, Auth) \\
+\hline
+Custom Hooks & Frontend & Reusable stateful logic \\
+\hline
+\end{tabularx}
+\caption{Design Patterns Used}
+\end{table}
+
+% ============================================================================
+% CHAPTER 3: TECHNOLOGY STACK
+% ============================================================================
+\chapter{Technology Stack}
+
+\section{Frontend Technologies}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Technology} & \textbf{Version} & \textbf{Purpose} \\
+\hline
+Next.js & 15.x & React framework with App Router \\
+\hline
+React & 19.x & UI component library \\
+\hline
+TypeScript & 5.x & Type-safe JavaScript \\
+\hline
+Tailwind CSS & 3.x & Utility-first CSS framework \\
+\hline
+Zustand & 4.x & Lightweight state management \\
+\hline
+Socket.IO Client & 4.x & WebSocket client library \\
+\hline
+Lucide React & -- & Icon library \\
+\hline
+\end{tabularx}
+\caption{Frontend Technology Stack}
+\end{table}
+
+\subsection{Next.js App Router}
+
+The application uses Next.js 15 with the App Router for:
+\begin{itemize}
+    \item Server and Client Components
+    \item Route Groups for layout organization
+    \item Dynamic routing for auction pages
+    \item Built-in optimizations (code splitting, prefetching)
+\end{itemize}
+
+\subsection{State Management}
+
+Zustand is used for global state management with the following stores:
+\begin{itemize}
+    \item \textbf{AuthStore} -- User authentication state with localStorage persistence
+\end{itemize}
+
+\section{Backend Technologies}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Technology} & \textbf{Version} & \textbf{Purpose} \\
+\hline
+Node.js & 20.x & JavaScript runtime \\
+\hline
+Express.js & 4.x & Web application framework \\
+\hline
+TypeScript & 5.x & Type-safe JavaScript \\
+\hline
+Socket.IO & 4.x & WebSocket server library \\
+\hline
+jsonwebtoken & 9.x & JWT authentication \\
+\hline
+bcrypt & 5.x & Password hashing \\
+\hline
+cors & 2.x & Cross-origin resource sharing \\
+\hline
+\end{tabularx}
+\caption{Backend Technology Stack}
+\end{table}
+
+\section{Database Technologies}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Technology} & \textbf{Version} & \textbf{Purpose} \\
+\hline
+PostgreSQL & 15.x & Relational database \\
+\hline
+Prisma ORM & 6.x & Database ORM and migrations \\
+\hline
+\end{tabularx}
+\caption{Database Technology Stack}
+\end{table}
+
+\section{Development Tools}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Tool} & \textbf{Purpose} \\
+\hline
+Turborepo & Monorepo build orchestration \\
+\hline
+pnpm/npm & Package management \\
+\hline
+ESLint & Code linting \\
+\hline
+Prettier & Code formatting \\
+\hline
+Prisma Studio & Database GUI \\
+\hline
+\end{tabularx}
+\caption{Development Tools}
+\end{table}
+
+% ============================================================================
+% CHAPTER 4: DATABASE DESIGN
+% ============================================================================
+\chapter{Database Design}
+
+\section{Entity Relationship Diagram}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    entity/.style={rectangle, draw=primary, fill=primary!10, thick, minimum width=3cm, minimum height=2cm, align=center},
+    relationship/.style={diamond, draw=secondary, fill=secondary!10, thick, aspect=2, align=center},
+    attribute/.style={ellipse, draw=gray, fill=gray!10, thick, align=center, font=\small},
+]
+
+% Entities
+\node[entity] (user) at (0,0) {\textbf{User}\\id, email\\password\\username};
+
+\node[entity] (item) at (5,0) {\textbf{Item}\\id, name\\description\\imageUrl[]};
+
+\node[entity] (auction) at (10,0) {\textbf{Auction}\\id, startTime\\endTime\\currentBid};
+
+\node[entity] (bid) at (5,-4) {\textbf{Bid}\\id, amount\\createdAt};
+
+% Relationships
+\draw[->, thick] (user) -- node[above] {owns} (item);
+\draw[->, thick] (item) -- node[above] {1:1} (auction);
+\draw[->, thick] (user) -- node[left] {places} (bid);
+\draw[->, thick] (bid) -- node[right] {on} (auction);
+
+\end{tikzpicture}
+\caption{Entity Relationship Diagram}
+\end{figure}
+
+\section{Data Models}
+
+\subsection{User Model}
+
+\begin{lstlisting}[caption=User Schema (Prisma)]
+model user {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  username    String
+  permission  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  auctions    auction[] @relation("UserAuctions")
+  items       item[]    @relation("UserItems")
+  bids        bid[]     @relation("UserBids")
+}
+\end{lstlisting}
+
+\textbf{Field Descriptions:}
+\begin{itemize}
+    \item \texttt{id} -- Unique identifier (CUID)
+    \item \texttt{email} -- User email (unique, used for login)
+    \item \texttt{password} -- Bcrypt-hashed password
+    \item \texttt{permission} -- Role level (0 = regular user, higher = admin)
+\end{itemize}
+
+\subsection{Item Model}
+
+\begin{lstlisting}[caption=Item Schema (Prisma)]
+model item {
+  id           String     @id @default(cuid())
+  name         String
+  description  String
+  imageUrl     String[]   
+  type         ItemType   // AUCTION, DIRECT, BARTER
+  price        Float?     
+  status       ItemStatus @default(AVAILABLE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  ownerId      String
+  owner        user       @relation("UserItems", 
+                          fields: [ownerId], 
+                          references: [id])
+  auction      auction?
+}
+
+enum ItemType {
+  AUCTION
+  DIRECT
+  BARTER
+}
+
+enum ItemStatus {
+  AVAILABLE
+  SOLD
+  EXPIRED
+  WITHDRAWN
+}
+\end{lstlisting}
+
+\subsection{Auction Model}
+
+\begin{lstlisting}[caption=Auction Schema (Prisma)]
+model auction {
+  id           String     @id @default(cuid())
+  startTime    DateTime
+  endTime      DateTime
+  startingBid  Float
+  currentBid   Float      @default(0)
+  estimatedValue Float?    
+  category     String     @default("other")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  ownerId      String
+  owner        user       @relation("UserAuctions", 
+                          fields: [ownerId], 
+                          references: [id])
+
+  itemId       String     @unique
+  item         item       @relation(fields: [itemId], 
+                          references: [id])
+  bids         bid[]
+}
+\end{lstlisting}
+
+\subsection{Bid Model}
+
+\begin{lstlisting}[caption=Bid Schema (Prisma)]
+model bid {
+  id           String     @id @default(cuid())
+  amount       Float
+  createdAt    DateTime   @default(now())
+
+  bidderId     String
+  bidder       user       @relation("UserBids", 
+                          fields: [bidderId], 
+                          references: [id])
+
+  auctionId    String
+  auction      auction    @relation(fields: [auctionId], 
+                          references: [id])
+}
+\end{lstlisting}
+
+\section{Database Relationships}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Relationship} & \textbf{Type} & \textbf{Description} \\
+\hline
+User → Items & One-to-Many & A user can own multiple items \\
+\hline
+User → Auctions & One-to-Many & A user can create multiple auctions \\
+\hline
+User → Bids & One-to-Many & A user can place multiple bids \\
+\hline
+Item → Auction & One-to-One & An item can have one auction \\
+\hline
+Auction → Bids & One-to-Many & An auction can have multiple bids \\
+\hline
+\end{tabularx}
+\caption{Database Relationships}
+\end{table}
+
+% ============================================================================
+% CHAPTER 5: API DOCUMENTATION
+% ============================================================================
+\chapter{API Documentation}
+
+\section{Base Configuration}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Property} & \textbf{Value} \\
+\hline
+Base URL & \texttt{http://localhost:4000} \\
+\hline
+Content Type & \texttt{application/json} \\
+\hline
+Authentication & Bearer Token (JWT) \\
+\hline
+\end{tabularx}
+\caption{API Configuration}
+\end{table}
+
+\section{Response Format}
+
+All API responses follow a standard format:
+
+\begin{lstlisting}[language=json, caption=Standard API Response]
+{
+  "success": true | false,
+  "data": <response_data> | <error_message>
+}
+\end{lstlisting}
+
+\section{Authentication Endpoints}
+
+\subsection{POST /auth/register}
+
+Register a new user account.
+
+\textbf{Request Body:}
+\begin{lstlisting}[language=json]
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "username": "johndoe"
+}
+\end{lstlisting}
+
+\textbf{Response (201 Created):}
+\begin{lstlisting}[language=json]
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "clxyz123...",
+      "email": "user@example.com",
+      "username": "johndoe"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
+\end{lstlisting}
+
+\subsection{POST /auth/login}
+
+Authenticate an existing user.
+
+\textbf{Request Body:}
+\begin{lstlisting}[language=json]
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK):}
+\begin{lstlisting}[language=json]
+{
+  "success": true,
+  "data": {
+    "user": { ... },
+    "token": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
+\end{lstlisting}
+
+\section{Auction Endpoints}
+
+\subsection{GET /auctions}
+
+Retrieve all auctions.
+
+\textbf{Headers:} \texttt{Authorization: Bearer <token>}
+
+\textbf{Response (200 OK):}
+\begin{lstlisting}[language=json]
+{
+  "success": true,
+  "data": [
+    {
+      "id": "auction123",
+      "startTime": "2026-01-10T10:00:00Z",
+      "endTime": "2026-01-17T10:00:00Z",
+      "startingBid": 100.00,
+      "currentBid": 150.00,
+      "category": "electronics",
+      "item": { ... },
+      "owner": { ... },
+      "bids": [ ... ]
+    }
+  ]
+}
+\end{lstlisting}
+
+\subsection{GET /auctions/:id}
+
+Retrieve a specific auction by ID.
+
+\textbf{Parameters:}
+\begin{itemize}
+    \item \texttt{id} (path) -- Auction ID
+\end{itemize}
+
+\subsection{POST /auctions}
+
+Create a new auction. \textit{(Protected)}
+
+\textbf{Request Body:}
+\begin{lstlisting}[language=json]
+{
+  "title": "Vintage Watch",
+  "description": "A beautiful vintage watch...",
+  "category": "accessories",
+  "imageUrl": ["https://..."],
+  "type": "AUCTION",
+  "startTime": "2026-01-10T10:00:00Z",
+  "endTime": "2026-01-17T10:00:00Z",
+  "startingBid": 100.00
+}
+\end{lstlisting}
+
+\subsection{PUT /auctions/:id}
+
+Update an existing auction. \textit{(Protected, Owner Only)}
+
+\textbf{Request Body:}
+\begin{lstlisting}[language=json]
+{
+  "itemName": "Updated Name",
+  "description": "Updated description",
+  "startingBid": 150.00,
+  "endTime": "2026-01-20T10:00:00Z",
+  "imageUrl": ["https://..."]
+}
+\end{lstlisting}
+
+\subsection{DELETE /auctions/:id}
+
+Delete an auction. \textit{(Protected, Owner Only)}
+
+\section{API Error Codes}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Code} & \textbf{Status} & \textbf{Description} \\
+\hline
+200 & OK & Request successful \\
+\hline
+201 & Created & Resource created successfully \\
+\hline
+400 & Bad Request & Invalid request data \\
+\hline
+401 & Unauthorized & Missing or invalid token \\
+\hline
+403 & Forbidden & Insufficient permissions \\
+\hline
+404 & Not Found & Resource not found \\
+\hline
+500 & Server Error & Internal server error \\
+\hline
+\end{tabularx}
+\caption{API Error Codes}
+\end{table}
+
+% ============================================================================
+% CHAPTER 6: WEBSOCKET IMPLEMENTATION
+% ============================================================================
+\chapter{WebSocket Implementation}
+
+\section{Overview}
+
+The application uses Socket.IO for real-time bidirectional communication, enabling:
+\begin{itemize}
+    \item Live auction bidding with instant updates
+    \item Real-time chat messaging
+    \item Participant presence tracking
+    \item Typing indicators
+\end{itemize}
+
+\section{Connection Setup}
+
+\subsection{Server Configuration}
+
+\begin{lstlisting}[language=JavaScript, caption=Socket.IO Server Setup]
+import { Server } from "socket.io";
+import { createServer } from "http";
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+// Authentication middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.data.user = decoded;
+    next();
+  } catch (err) {
+    next(new Error("Authentication error"));
+  }
+});
+\end{lstlisting}
+
+\subsection{Client Connection}
+
+\begin{lstlisting}[language=JavaScript, caption=Socket.IO Client Setup]
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:4000", {
+  auth: {
+    token: getAuthToken(),
+  },
+  autoConnect: true,
+  reconnection: true,
+});
+\end{lstlisting}
+
+\section{Auction Events}
+
+\subsection{Client to Server Events}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Event} & \textbf{Description} \\
+\hline
+\texttt{join\_auction} & Join an auction room to receive updates \\
+\hline
+\texttt{leave\_auction} & Leave an auction room \\
+\hline
+\texttt{place\_bid} & Submit a new bid \\
+\hline
+\texttt{end\_auction} & End auction early (owner only) \\
+\hline
+\end{tabularx}
+\caption{Client to Server Auction Events}
+\end{table}
+
+\subsection{Server to Client Events}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Event} & \textbf{Description} \\
+\hline
+\texttt{auction\_state} & Initial auction state when joining \\
+\hline
+\texttt{bid\_placed} & Broadcast when any user places a bid \\
+\hline
+\texttt{bid\_success} & Confirmation to the bidder \\
+\hline
+\texttt{bid\_error} & Error message to the bidder \\
+\hline
+\texttt{auction\_ended} & Broadcast when auction ends \\
+\hline
+\texttt{user\_joined} & Someone joined the auction room \\
+\hline
+\texttt{user\_left} & Someone left the auction room \\
+\hline
+\end{tabularx}
+\caption{Server to Client Auction Events}
+\end{table}
+
+\subsection{Bid Placement Flow}
+
+\begin{lstlisting}[language=JavaScript, caption=Bid Placement Handler]
+socket.on("place_bid", async ({ auctionId, amount }) => {
+  const auction = await prisma.auction.findUnique({
+    where: { id: auctionId },
+  });
+
+  // Validate bid
+  if (amount <= auction.currentBid) {
+    socket.emit("bid_error", { 
+      message: "Bid must be higher than current bid" 
+    });
+    return;
+  }
+
+  // Create bid and update auction
+  const bid = await prisma.bid.create({
+    data: {
+      amount,
+      bidderId: socket.data.user.id,
+      auctionId,
+    },
+  });
+
+  await prisma.auction.update({
+    where: { id: auctionId },
+    data: { currentBid: amount },
+  });
+
+  // Broadcast to all participants
+  io.to(`auction:${auctionId}`).emit("bid_placed", {
+    bid,
+    auction: updatedAuction,
+  });
+});
+\end{lstlisting}
+
+\section{Chat Events}
+
+\subsection{Event Reference}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Direction} & \textbf{Event} & \textbf{Description} \\
+\hline
+C→S & \texttt{join\_chat} & Join a chat room \\
+\hline
+C→S & \texttt{send\_message} & Send a chat message \\
+\hline
+C→S & \texttt{typing} & Indicate user is typing \\
+\hline
+C→S & \texttt{delete\_message} & Delete own message \\
+\hline
+S→C & \texttt{chat\_history} & Previous messages on join \\
+\hline
+S→C & \texttt{new\_message} & Broadcast new message \\
+\hline
+S→C & \texttt{user\_typing} & Someone is typing \\
+\hline
+S→C & \texttt{message\_deleted} & Message was deleted \\
+\hline
+\end{tabularx}
+\caption{Chat Events Reference}
+\end{table}
+
+\section{Room Management}
+
+Rooms are used to organize connections:
+
+\begin{itemize}
+    \item \textbf{Auction Rooms}: \texttt{auction:\{auctionId\}}
+    \item \textbf{Chat Rooms}: \texttt{chat:\{chatId\}} or \texttt{auction-chat:\{auctionId\}}
+\end{itemize}
+
+\begin{lstlisting}[language=JavaScript, caption=Room Management]
+// Join room
+socket.join(`auction:${auctionId}`);
+
+// Leave room
+socket.leave(`auction:${auctionId}`);
+
+// Broadcast to room
+io.to(`auction:${auctionId}`).emit("event", data);
+
+// Broadcast to room except sender
+socket.to(`auction:${auctionId}`).emit("event", data);
+\end{lstlisting}
+
+% ============================================================================
+% CHAPTER 7: FRONTEND ARCHITECTURE
+% ============================================================================
+\chapter{Frontend Architecture}
+
+\section{App Router Structure}
+
+Next.js App Router organizes pages using route groups:
+
+\begin{lstlisting}[caption=Route Group Organization]
+app/
+├── (auth)/           # Authentication pages
+│   ├── layout.tsx    # Minimal layout (no header)
+│   ├── login/
+│   └── register/
+│
+├── (main)/           # Public pages
+│   ├── layout.tsx    # Full layout with header
+│   ├── page.tsx      # Home page
+│   └── auctions/
+│       ├── page.tsx          # Auction list
+│       └── [id]/
+│           └── page.tsx      # Auction detail
+│
+├── (seller)/         # Seller dashboard
+│   └── seller/
+│       ├── layout.tsx        # Dashboard layout
+│       ├── page.tsx          # Dashboard home
+│       └── auctions/
+│           ├── page.tsx      # My auctions
+│           ├── create/       # Create auction
+│           └── [auctionId]/  # Auction detail
+│
+├── layout.tsx        # Root layout
+└── globals.css       # Global styles
+\end{lstlisting}
+
+\section{Component Architecture}
+
+\subsection{Component Categories}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Category} & \textbf{Components} \\
+\hline
+Layout & Header, Navbar, Sidebar, Breadcrumb \\
+\hline
+Auction & ItemCard, LiveBidding, AuctionImageViewer \\
+\hline
+Communication & AuctionChat \\
+\hline
+Modals & EditAuctionModal, DeleteConfirmModal \\
+\hline
+UI Elements & Logo, Search, HeroCarousel \\
+\hline
+\end{tabularx}
+\caption{Component Categories}
+\end{table}
+
+\subsection{LiveBidding Component}
+
+The LiveBidding component provides real-time auction interaction:
+
+\begin{lstlisting}[language=JavaScript, caption=LiveBidding Component Usage]
+import LiveBidding from "@/components/LiveBidding";
+
+export default function AuctionPage({ auctionId }) {
+  return (
+    <div className="grid grid-cols-3 gap-6">
+      <div className="col-span-2">
+        {/* Auction details */}
+      </div>
+      <div>
+        <LiveBidding auctionId={auctionId} />
+      </div>
+    </div>
+  );
+}
+\end{lstlisting}
+
+\section{Custom Hooks}
+
+\subsection{useAuth Hook}
+
+Manages authentication state:
+
+\begin{lstlisting}[language=JavaScript, caption=useAuth Hook]
+import { useAuthStore } from "@/stores/AuthStore";
+
+export function useAuth() {
+  const { user, token, setAuth, logout } = useAuthStore();
+  
+  const isAuthenticated = !!token;
+  
+  return { user, token, isAuthenticated, setAuth, logout };
+}
+\end{lstlisting}
+
+\subsection{useAuctionSocket Hook}
+
+Manages real-time auction state:
+
+\begin{lstlisting}[language=JavaScript, caption=useAuctionSocket Hook]
+const { 
+  auctionState, 
+  recentBids, 
+  placeBid, 
+  error, 
+  isBidding,
+  isConnected 
+} = useAuctionSocket(auctionId);
+\end{lstlisting}
+
+\subsection{useChatSocket Hook}
+
+Manages real-time chat functionality:
+
+\begin{lstlisting}[language=JavaScript, caption=useChatSocket Hook]
+const { 
+  messages, 
+  sendMessage, 
+  startTyping, 
+  stopTyping, 
+  deleteMessage,
+  isConnected 
+} = useChatSocket(chatId);
+\end{lstlisting}
+
+\section{State Management}
+
+\subsection{Zustand AuthStore}
+
+\begin{lstlisting}[language=JavaScript, caption=AuthStore Implementation]
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  setAuth: (user: User, token: string) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      setAuth: (user, token) => set({ user, token }),
+      logout: () => set({ user: null, token: null }),
+    }),
+    { name: "auth-storage" }
+  )
+);
+\end{lstlisting}
+
+\section{Context Providers}
+
+\subsection{Socket Context}
+
+Provides global WebSocket connection:
+
+\begin{lstlisting}[language=JavaScript, caption=SocketContext Provider]
+"use client";
+import { createContext, useContext, useEffect } from "react";
+import { io, Socket } from "socket.io-client";
+
+const SocketContext = createContext<Socket | null>(null);
+
+export function SocketProvider({ children }) {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    const newSocket = io("http://localhost:4000", {
+      auth: { token },
+    });
+    
+    setSocket(newSocket);
+    
+    return () => { newSocket.close(); };
+  }, []);
+  
+  return (
+    <SocketContext.Provider value={socket}>
+      {children}
+    </SocketContext.Provider>
+  );
+}
+
+export const useSocket = () => useContext(SocketContext);
+\end{lstlisting}
+
+% ============================================================================
+% CHAPTER 8: SECURITY CONSIDERATIONS
+% ============================================================================
+\chapter{Security Considerations}
+
+\section{Authentication Security}
+
+\subsection{Password Handling}
+
+\begin{itemize}
+    \item Passwords are hashed using bcrypt with salt rounds of 10
+    \item Plain text passwords are never stored or logged
+    \item Password minimum length: 6 characters (should be increased)
+\end{itemize}
+
+\subsection{JWT Implementation}
+
+\begin{itemize}
+    \item Tokens expire after 2 days
+    \item Tokens contain user ID and email
+    \item Secret key should be stored in environment variables
+\end{itemize}
+
+\section{Known Security Issues}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Severity} & \textbf{Issue} & \textbf{Recommendation} \\
+\hline
+\textcolor{danger}{Critical} & Hardcoded JWT fallback & Remove fallback, require env var \\
+\hline
+\textcolor{danger}{Critical} & CORS allows all origins & Configure specific allowed origins \\
+\hline
+\textcolor{danger}{Critical} & XSS in chat messages & Sanitize all user input \\
+\hline
+\textcolor{accent}{Medium} & No rate limiting & Implement express-rate-limit \\
+\hline
+\textcolor{accent}{Medium} & Token in localStorage & Consider httpOnly cookies \\
+\hline
+\textcolor{accent}{Medium} & No input validation & Add Zod/Joi validation \\
+\hline
+\end{tabularx}
+\caption{Security Issues and Recommendations}
+\end{table}
+
+\section{Recommended Security Measures}
+
+\subsection{Backend Security}
+
+\begin{lstlisting}[language=JavaScript, caption=Recommended Security Middleware]
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import cors from "cors";
+
+// Security headers
+app.use(helmet());
+
+// Rate limiting
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+}));
+\end{lstlisting}
+
+\subsection{Input Validation}
+
+\begin{lstlisting}[language=JavaScript, caption=Zod Validation Example]
+import { z } from "zod";
+
+const createAuctionSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(5000),
+  startingBid: z.number().positive(),
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
+});
+
+// Validate in controller
+const result = createAuctionSchema.safeParse(req.body);
+if (!result.success) {
+  return res.status(400).json({ 
+    success: false, 
+    data: result.error 
+  });
+}
+\end{lstlisting}
+
+% ============================================================================
+% CHAPTER 9: DEPLOYMENT GUIDE
+% ============================================================================
+\chapter{Deployment Guide}
+
+\section{Environment Variables}
+
+\subsection{Backend (.env)}
+
+\begin{lstlisting}[caption=Backend Environment Variables]
+# Database
+DATABASE_URL="postgresql://user:pass@host:5432/db"
+
+# Authentication
+JWT_SECRET="your-secure-secret-key"
+
+# Server
+PORT=4000
+NODE_ENV=production
+
+# CORS
+FRONTEND_URL="https://your-domain.com"
+\end{lstlisting}
+
+\subsection{Frontend (.env.local)}
+
+\begin{lstlisting}[caption=Frontend Environment Variables]
+NEXT_PUBLIC_API_URL="https://api.your-domain.com"
+NEXT_PUBLIC_WS_URL="wss://api.your-domain.com"
+\end{lstlisting}
+
+\section{Database Setup}
+
+\begin{lstlisting}[language=bash, caption=Database Migration Commands]
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate deploy
+
+# Seed database (if applicable)
+npx prisma db seed
+\end{lstlisting}
+
+\section{Build Commands}
+
+\begin{lstlisting}[language=bash, caption=Build Commands]
+# Install dependencies
+npm install
+
+# Build all packages
+npm run build
+
+# Start production servers
+npm run start
+\end{lstlisting}
+
+\section{Deployment Checklist}
+
+\begin{itemize}
+    \item[$\square$] Environment variables configured
+    \item[$\square$] Database migrations applied
+    \item[$\square$] SSL certificates installed
+    \item[$\square$] CORS configured for production domain
+    \item[$\square$] Rate limiting enabled
+    \item[$\square$] Security headers configured
+    \item[$\square$] Logging and monitoring set up
+    \item[$\square$] Backup strategy in place
+    \item[$\square$] CI/CD pipeline configured
+\end{itemize}
+
+% ============================================================================
+% CHAPTER 10: FUTURE ROADMAP
+% ============================================================================
+\chapter{Future Roadmap}
+
+\section{Current Status}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|X|l|}
+\hline
+\textbf{Milestone} & \textbf{Status} \\
+\hline
+Core Auction Flow & \textcolor{secondary}{Complete} \\
+\hline
+Seller Dashboard & \textcolor{secondary}{Complete} \\
+\hline
+Live Bidding & \textcolor{secondary}{Complete} \\
+\hline
+Real-time Chat & \textcolor{secondary}{Complete} \\
+\hline
+Critical Bugfixes & \textcolor{accent}{In Progress} \\
+\hline
+Direct Selling & \textcolor{danger}{Not Started} \\
+\hline
+Barter System & \textcolor{danger}{Not Started} \\
+\hline
+\end{tabularx}
+\caption{Current Development Status}
+\end{table}
+
+\section{Planned Features}
+
+\subsection{Phase 1: Stabilization}
+
+\begin{enumerate}
+    \item Fix critical security vulnerabilities
+    \item Implement input validation
+    \item Add rate limiting and security headers
+    \item Persist chat messages to database
+    \item Fix bidding race conditions
+\end{enumerate}
+
+\subsection{Phase 2: Feature Completion}
+
+\begin{enumerate}
+    \item Direct selling implementation
+    \item Barter system with proposal/counter flow
+    \item Notification system
+    \item Home page recommendations
+    \item Search and filtering
+\end{enumerate}
+
+\subsection{Phase 3: Enhancement}
+
+\begin{enumerate}
+    \item Payment integration
+    \item Email notifications
+    \item User reviews and ratings
+    \item Advanced analytics dashboard
+    \item Mobile application
+\end{enumerate}
+
+\section{Technical Debt}
+
+\begin{itemize}
+    \item Replace \texttt{any} types with proper TypeScript interfaces
+    \item Add comprehensive test suite
+    \item Implement proper error boundaries
+    \item Add database indexes for performance
+    \item Refactor to use React Server Components where appropriate
+\end{itemize}
+
+% ============================================================================
+% APPENDIX
+% ============================================================================
+\appendix
+
+\chapter{Quick Reference}
+
+\section{API Endpoints Summary}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|l|X|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\hline
+POST & /auth/register & No & Register new user \\
+\hline
+POST & /auth/login & No & Login user \\
+\hline
+GET & /auth/user/:id & Yes & Get user by ID \\
+\hline
+GET & /auctions & Yes & List all auctions \\
+\hline
+GET & /auctions/:id & Yes & Get auction by ID \\
+\hline
+POST & /auctions & Yes & Create auction \\
+\hline
+PUT & /auctions/:id & Yes* & Update auction \\
+\hline
+DELETE & /auctions/:id & Yes* & Delete auction \\
+\hline
+\end{tabularx}
+\caption{API Endpoints (* = Owner only)}
+\end{table}
+
+\section{WebSocket Events Summary}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Event} & \textbf{Direction} & \textbf{Payload} \\
+\hline
+join\_auction & C→S & \{ auctionId \} \\
+\hline
+place\_bid & C→S & \{ auctionId, amount \} \\
+\hline
+bid\_placed & S→C & \{ bid, auction \} \\
+\hline
+join\_chat & C→S & \{ chatId, chatType \} \\
+\hline
+send\_message & C→S & \{ chatId, message \} \\
+\hline
+new\_message & S→C & \{ message \} \\
+\hline
+\end{tabularx}
+\caption{WebSocket Events Summary}
+\end{table}
+
+\section{Development Commands}
+
+\begin{lstlisting}[language=bash, caption=Common Development Commands]
+# Start development servers
+npm run dev
+
+# Build all packages
+npm run build
+
+# Generate Prisma client
+cd packages/db && npx prisma generate
+
+# Run database migrations
+cd packages/db && npx prisma migrate dev
+
+# Open Prisma Studio
+cd packages/db && npx prisma studio
+
+# Lint code
+npm run lint
+\end{lstlisting}
+
+\end{document}

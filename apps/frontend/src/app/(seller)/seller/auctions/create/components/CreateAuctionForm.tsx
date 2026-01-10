@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ItemType } from "@auctioneer/types";
-import useAuctions from "@/hooks/useAuctions";
+import useMyAuctions from "@/hooks/useMyAuctions";
 
 interface CreateAuctionFormData {
   // Item fields
@@ -29,7 +29,7 @@ interface CreateAuctionFormData {
 }
 
 export default function CreateAuctionForm() {
-  const { createAuction } = useAuctions();
+  const { createAuction } = useMyAuctions();
   const router = useRouter();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);

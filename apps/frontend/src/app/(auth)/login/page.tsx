@@ -1,6 +1,6 @@
 // Login.tsx
 "use client";
-import Logo from "@/components/Logo";
+import Logo from "@/components/layout/Logo";
 import React, { useState, useEffect } from "react";
 import AuthApi from "@/lib/AuthApi";
 import { useAuth } from "@/hooks/useAuth";

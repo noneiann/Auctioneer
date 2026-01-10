@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
 	createAuction,
 	listAuctions,
+	listUserAuctions,
 	getAuction,
 	updateAuction,
 	deleteAuction,
@@ -11,6 +12,7 @@ const router = Router();
 
 router.post("/", authenticateToken, createAuction);
 router.get("/", authenticateToken, listAuctions);
+router.get("/my", authenticateToken, listUserAuctions);
 router.get("/:id", authenticateToken, getAuction);
 router.put("/:id", authenticateToken, updateAuction);
 router.delete("/:id", authenticateToken, deleteAuction);

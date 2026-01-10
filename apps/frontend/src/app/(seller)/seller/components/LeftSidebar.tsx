@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
 	Hammer,
 	DollarSign,
@@ -17,6 +17,7 @@ import {
 	ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LeftSidebarProps {
 	collapsed: boolean;
@@ -53,7 +54,14 @@ const menuSections = [
 
 export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
 	const pathname = usePathname();
+	const router = useRouter();
+	const { logout } = useAuth();
 	const [expandedSections, setExpandedSections] = useState<number[]>([0, 1, 2]);
+
+	const handleLogout = () => {
+		logout();
+		router.push("/login");
+	};
 
 	const toggleSection = (index: number) => {
 		setExpandedSections((prev) =>
@@ -117,6 +125,34 @@ export default function LeftSidebar({ collapsed, onToggle }: LeftSidebarProps) {
 							<div className='space-y-1'>
 								{section.items.map((item, itemIndex) => {
 									const IconComponent = item.icon;
+									const isLogout = item.name === "Logout";
+
+									if (isLogout) {
+										return (
+											<button
+												key={itemIndex}
+												onClick={handleLogout}
+												className={`w-full flex items-center px-3 py-3 rounded-lg transition-colors group relative text-foreground/70 hover:bg-foreground/5 hover:text-foreground`}>
+												{collapsed && (
+													<IconComponent size={18} className='self-center' />
+												)}
+												{!collapsed && (
+													<IconComponent size={18} className='mr-2' />
+												)}
+												{!collapsed && (
+													<span className='text-sm font-medium'>
+														{item.name}
+													</span>
+												)}
+												{collapsed && (
+													<div className='absolute left-16 bg-foreground text-background px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none'>
+														{item.name}
+													</div>
+												)}
+											</button>
+										);
+									}
+
 									return (
 										<Link
 											key={itemIndex}

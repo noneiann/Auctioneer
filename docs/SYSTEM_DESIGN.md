@@ -19,9 +19,10 @@ Auctioneer is a full-stack web application for online auctions, direct sales, an
 │  │  - App Router (Auth, Main, Seller routes)            │  │
 │  │  - Zustand State Management                           │  │
 │  │  - TailwindCSS Styling                                │  │
+│  │  - Socket.IO Client (Real-time)                       │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
-                            ↓ HTTP/REST
+              ↓ HTTP/REST              ↓ WebSocket
 ┌─────────────────────────────────────────────────────────────┐
 │                      API Layer                              │
 │  ┌──────────────────────────────────────────────────────┐  │
@@ -30,6 +31,10 @@ Auctioneer is a full-stack web application for online auctions, direct sales, an
 │  │  - JWT Authentication                                 │  │
 │  │  - CORS Middleware                                    │  │
 │  │  - Route Controllers & Services                       │  │
+│  │  - Socket.IO Server (Real-time)                       │  │
+│  │    • Auction Bidding Events                           │  │
+│  │    • Chat Messaging                                   │  │
+│  │    • Live Updates                                     │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                             ↓ Prisma ORM
@@ -40,6 +45,7 @@ Auctioneer is a full-stack web application for online auctions, direct sales, an
 │  │  - User Management                                    │  │
 │  │  - Items & Auctions                                   │  │
 │  │  - Bids & Transactions                                │  │
+│  │  - Chat Messages                                      │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -57,6 +63,7 @@ Auctioneer is a full-stack web application for online auctions, direct sales, an
 - **State Management**: Zustand (with persist middleware)
 - **Icons**: Lucide React
 - **HTTP Client**: Fetch API
+- **WebSocket Client**: Socket.IO Client
 
 ### Backend (`apps/backend`)
 
@@ -67,6 +74,7 @@ Auctioneer is a full-stack web application for online auctions, direct sales, an
 - **CORS**: cors middleware
 - **Runtime**: Node.js
 - **Environment**: dotenv
+- **WebSocket Server**: Socket.IO
 
 ### Database (`packages/db`)
 
@@ -363,6 +371,331 @@ const { user, token, setAuth, logout } = useAuth();
 /auctions/create           → Create auction (protected)
 /seller                    → Seller dashboard (protected)
 /seller/auctions           → Manage auctions (protected)
+```
+
+---
+
+## WebSocket Architecture (Real-time Features)
+
+### Overview
+
+The application uses **Socket.IO** for bidirectional, event-based communication between clients and server. This enables real-time features for live auction bidding and chat messaging.
+
+### WebSocket Server Setup
+
+**Technology**: Socket.IO v4.x
+**Port**: Same as Express server (4000)
+**Transport**: WebSocket with HTTP long-polling fallback
+
+### Architecture Pattern
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Client Applications                       │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
+│  │  Browser 1 │  │  Browser 2 │  │  Browser N │            │
+│  └──────┬─────┘  └──────┬─────┘  └──────┬─────┘            │
+└─────────┼────────────────┼────────────────┼──────────────────┘
+          │                │                │
+          │ Socket.IO      │ Socket.IO      │ Socket.IO
+          │ Connection     │ Connection     │ Connection
+          │                │                │
+┌─────────▼────────────────▼────────────────▼──────────────────┐
+│               Socket.IO Server (Port 4000)                    │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │           Connection Manager                          │   │
+│  │  - Authentication verification                        │   │
+│  │  - User session management                            │   │
+│  │  - Room management (auction rooms, chat rooms)        │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │           Event Handlers                              │   │
+│  │  ┌────────────────┐    ┌─────────────────┐          │   │
+│  │  │ Auction Events │    │  Chat Events    │          │   │
+│  │  │ - join_auction │    │  - join_chat    │          │   │
+│  │  │ - place_bid    │    │  - send_message │          │   │
+│  │  │ - leave_auction│    │  - typing       │          │   │
+│  │  └────────────────┘    └─────────────────┘          │   │
+│  └──────────────────────────────────────────────────────┘   │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+                  ┌──────────────────┐
+                  │  PostgreSQL DB   │
+                  │  - Bids          │
+                  │  - Messages      │
+                  │  - Auctions      │
+                  └──────────────────┘
+```
+
+### Event Architecture
+
+#### 1. Live Auction Bidding
+
+**Use Case**: Real-time bid updates across all users viewing an auction
+
+**Events Flow**:
+
+```
+Client A                   Server                      All Clients
+   │                         │                              │
+   │ place_bid              │                              │
+   ├────────────────────────>│                              │
+   │ {auctionId, amount}    │                              │
+   │                         │ Validate bid                 │
+   │                         │ Check user auth              │
+   │                         │ Verify amount > currentBid   │
+   │                         │ Check auction active         │
+   │                         │                              │
+   │                         │ Save to DB                   │
+   │                         ├─────────────┐                │
+   │                         │             │                │
+   │                         │<────────────┘                │
+   │                         │                              │
+   │                         │ bid_placed                   │
+   │                         ├─────────────────────────────>│
+   │                         │ {bid, auction, bidder}       │
+   │                         │                              │
+   │ bid_success            │                              │
+   │<────────────────────────┤                              │
+   │                         │                              │
+```
+
+**Events**:
+
+- `join_auction` - Client joins auction room
+- `leave_auction` - Client leaves auction room
+- `place_bid` - Client places new bid
+- `bid_placed` - Broadcast new bid to all room members
+- `bid_error` - Send error to bidder
+- `auction_ended` - Broadcast when auction time expires
+
+**Room Strategy**:
+
+- Room ID: `auction:${auctionId}`
+- All clients viewing an auction join the room
+- Broadcasts only sent to room members
+
+#### 2. Chat System
+
+**Use Case**: Real-time messaging between buyers and sellers
+
+**Events Flow**:
+
+```
+Client A                   Server                      Client B
+   │                         │                              │
+   │ send_message           │                              │
+   ├────────────────────────>│                              │
+   │ {chatId, message}      │                              │
+   │                         │ Validate message             │
+   │                         │ Check user auth              │
+   │                         │ Check chat permissions       │
+   │                         │                              │
+   │                         │ Save to DB                   │
+   │                         ├─────────────┐                │
+   │                         │             │                │
+   │                         │<────────────┘                │
+   │                         │                              │
+   │                         │ new_message                  │
+   │                         ├─────────────────────────────>│
+   │                         │ {message, sender, timestamp} │
+   │                         │                              │
+   │ message_sent           │                              │
+   │<────────────────────────┤                              │
+   │                         │                              │
+```
+
+**Events**:
+
+- `join_chat` - Join chat room
+- `leave_chat` - Leave chat room
+- `send_message` - Send chat message
+- `new_message` - Broadcast message to chat participants
+- `typing` - User is typing indicator
+- `stop_typing` - User stopped typing
+- `message_read` - Mark message as read
+
+**Room Strategy**:
+
+- Room ID: `chat:${chatId}` or `auction-chat:${auctionId}`
+- Only chat participants can join
+- Private 1-on-1 or auction-specific group chats
+
+### Authentication Strategy
+
+**Method**: JWT Token Verification
+
+```typescript
+// On connection
+socket.on("connection", async (socket) => {
+	const token = socket.handshake.auth.token;
+
+	try {
+		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+		socket.data.user = decoded;
+	} catch (error) {
+		socket.disconnect();
+		return;
+	}
+
+	// User authenticated, proceed with event listeners
+});
+```
+
+**Security**:
+
+- Token sent in handshake auth
+- Verified on connection
+- User data stored in `socket.data`
+- Re-verified for sensitive operations
+
+### Room Management
+
+**Auction Rooms**:
+
+```typescript
+// Join auction
+socket.join(`auction:${auctionId}`);
+
+// Leave auction
+socket.leave(`auction:${auctionId}`);
+
+// Broadcast to auction
+io.to(`auction:${auctionId}`).emit("bid_placed", bidData);
+```
+
+**Chat Rooms**:
+
+```typescript
+// Join chat
+socket.join(`chat:${chatId}`);
+
+// Private message in chat
+io.to(`chat:${chatId}`).emit("new_message", messageData);
+```
+
+### Scaling Considerations
+
+#### Single Server (Current)
+
+- In-memory room management
+- Direct socket connections
+- Suitable for up to 10,000 concurrent users
+
+#### Multi-Server (Future)
+
+**Challenge**: Rooms are server-specific
+**Solution**: Redis Adapter
+
+```typescript
+import { createAdapter } from "@socket.io/redis-adapter";
+import { createClient } from "redis";
+
+const pubClient = createClient({ url: "redis://localhost:6379" });
+const subClient = pubClient.duplicate();
+
+io.adapter(createAdapter(pubClient, subClient));
+```
+
+**Benefits**:
+
+- Shared room state across servers
+- Broadcast across all server instances
+- Horizontal scaling enabled
+
+### Error Handling
+
+**Connection Errors**:
+
+- Invalid token → Disconnect immediately
+- Network issues → Automatic reconnection
+- Server overload → Queue or reject new connections
+
+**Event Errors**:
+
+- Invalid bid → Send `bid_error` event
+- Permission denied → Send `error` event
+- Data validation → Send specific error messages
+
+**Reconnection Strategy**:
+
+```typescript
+const socket = io({
+	reconnection: true,
+	reconnectionDelay: 1000,
+	reconnectionAttempts: 5,
+});
+```
+
+### Performance Optimizations
+
+1. **Event Throttling**: Limit typing indicators to 500ms intervals
+2. **Payload Compression**: Enable WebSocket compression
+3. **Selective Broadcasting**: Only send to relevant room members
+4. **Connection Pooling**: Reuse database connections
+5. **Caching**: Cache auction data in memory for active auctions
+
+### Monitoring
+
+**Metrics to Track**:
+
+- Active connections count
+- Messages per second
+- Room sizes
+- Latency measurements
+- Error rates
+
+**Tools**:
+
+- Socket.IO Admin UI
+- Custom metrics emitter
+- Logging with Winston
+
+### Database Schema Updates
+
+**Chat Messages Table**:
+
+```prisma
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+
+  sender User @relation(fields: [senderId], references: [id])
+  chat   Chat @relation(fields: [chatId], references: [id])
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  type      ChatType  @default(AUCTION) // AUCTION or DIRECT
+  auctionId String?   @unique
+  createdAt DateTime  @default(now())
+
+  auction   Auction?  @relation(fields: [auctionId], references: [id])
+  messages  Message[]
+  participants ChatParticipant[]
+}
+
+model ChatParticipant {
+  id        String   @id @default(cuid())
+  chatId    String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([chatId, userId])
+}
+
+enum ChatType {
+  AUCTION
+  DIRECT
+}
 ```
 
 ---
