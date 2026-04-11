@@ -6,7 +6,9 @@ interface Message {
 	id: string;
 	chatId: string;
 	senderId: string;
-	senderEmail: string;
+	senderEmail?: string;
+	senderUsername?: string;
+	senderName?: string;
 	content: string;
 	createdAt: string;
 	read: boolean;

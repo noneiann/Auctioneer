@@ -1,6 +1,9 @@
 // services/auctionApi.ts
 import { ApiResponse } from "@auctioneer/types";
 
+const API_BASE_URL =
+	process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
 export type CreateAuctionBody = {
 	title: string;
 	description: string;
@@ -11,6 +14,56 @@ export type CreateAuctionBody = {
 	startTime: string; // ISO date string
 	endTime: string; // ISO date string
 	startingBid: number;
+};
+
+export type AuctionUser = {
+	id: string;
+	email?: string;
+	username?: string;
+	firstName?: string;
+	lastName?: string;
+};
+
+export type AuctionItem = {
+	id: string;
+	name: string;
+	description: string;
+	imageUrl: string[];
+	price?: number;
+};
+
+export type AuctionBid = {
+	id: string;
+	amount: number;
+	createdAt: string;
+	bidder?: AuctionUser | null;
+};
+
+export type Auction = {
+	id: string;
+	startingBid: number;
+	currentBid: number;
+	startTime: string;
+	endTime: string;
+	createdAt?: string;
+	category: string;
+	item: AuctionItem;
+	bids?: AuctionBid[];
+	owner?: AuctionUser;
+};
+
+export type AuctionListMeta = {
+	page: number;
+	pageSize: number;
+	total: number;
+	totalPages: number;
+	hasNextPage: boolean;
+	hasPreviousPage: boolean;
+};
+
+export type AuctionListData = {
+	items: Auction[];
+	meta: AuctionListMeta;
 };
 
 // More flexible type for updates - allows single string or array for imageUrl
@@ -41,10 +94,10 @@ function getAuthToken(): string | null {
 
 async function createAuction(
 	body: CreateAuctionBody
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<Auction>> {
 	const token = getAuthToken();
 
-	const res = await fetch("http://localhost:4000/auctions", {
+	const res = await fetch(`${API_BASE_URL}/auctions`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -62,10 +115,32 @@ async function createAuction(
 	return data;
 }
 
-async function getAuctions(): Promise<ApiResponse<any>> {
-	const token = getAuthToken();
+type GetAuctionsParams = {
+	page?: number;
+	pageSize?: number;
+	category?: string;
+	ownerId?: string;
+	itemType?: string;
+};
 
-	const res = await fetch("http://localhost:4000/auctions", {
+async function getAuctions(
+	params: GetAuctionsParams = {}
+): Promise<ApiResponse<AuctionListData>> {
+	const token = getAuthToken();
+	const query = new URLSearchParams();
+
+	if (params.page) query.set("page", String(params.page));
+	if (params.pageSize) query.set("pageSize", String(params.pageSize));
+	if (params.category) query.set("category", params.category);
+	if (params.ownerId) query.set("ownerId", params.ownerId);
+	if (params.itemType) query.set("itemType", params.itemType);
+
+	const queryString = query.toString();
+	const url = queryString
+		? `${API_BASE_URL}/auctions?${queryString}`
+		: `${API_BASE_URL}/auctions`;
+
+	const res = await fetch(url, {
 		headers: {
 			...(token && { Authorization: `Bearer ${token}` }),
 		},
@@ -80,10 +155,10 @@ async function getAuctions(): Promise<ApiResponse<any>> {
 	return data;
 }
 
-async function getMyAuctions(): Promise<ApiResponse<any>> {
+async function getMyAuctions(): Promise<ApiResponse<Auction[]>> {
 	const token = getAuthToken();
 
-	const res = await fetch("http://localhost:4000/auctions/my", {
+	const res = await fetch(`${API_BASE_URL}/auctions/my`, {
 		headers: {
 			...(token && { Authorization: `Bearer ${token}` }),
 		},
@@ -98,10 +173,10 @@ async function getMyAuctions(): Promise<ApiResponse<any>> {
 	return data;
 }
 
-async function getAuctionById(id: string): Promise<ApiResponse<any>> {
+async function getAuctionById(id: string): Promise<ApiResponse<Auction>> {
 	const token = getAuthToken();
 
-	const res = await fetch(`http://localhost:4000/auctions/${id}`, {
+	const res = await fetch(`${API_BASE_URL}/auctions/${id}`, {
 		headers: {
 			...(token && { Authorization: `Bearer ${token}` }),
 		},
@@ -119,10 +194,10 @@ async function getAuctionById(id: string): Promise<ApiResponse<any>> {
 async function updateAuction(
 	id: string,
 	body: UpdateAuctionBody
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<Auction>> {
 	const token = getAuthToken();
 
-	const res = await fetch(`http://localhost:4000/auctions/${id}`, {
+	const res = await fetch(`${API_BASE_URL}/auctions/${id}`, {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",
@@ -140,10 +215,10 @@ async function updateAuction(
 	return data;
 }
 
-async function deleteAuction(id: string): Promise<ApiResponse<any>> {
+async function deleteAuction(id: string): Promise<ApiResponse<null>> {
 	const token = getAuthToken();
 
-	const res = await fetch(`http://localhost:4000/auctions/${id}`, {
+	const res = await fetch(`${API_BASE_URL}/auctions/${id}`, {
 		method: "DELETE",
 		headers: {
 			...(token && { Authorization: `Bearer ${token}` }),

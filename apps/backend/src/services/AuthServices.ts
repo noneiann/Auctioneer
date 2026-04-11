@@ -1,13 +1,5 @@
 import prisma from "@auctioneer/db";
-import {
-	ApiResponse,
-	GetUserRequest,
-	RegisterRequest,
-	LoginRequest,
-	JwtPayloadUser,
-} from "@auctioneer/types/src";
 import bcrypt from "bcrypt";
-import jwt, { JwtPayload } from "jsonwebtoken";
 
 export const login = async (email: string, password: string) => {
 	const user = await prisma.user.findUnique({
@@ -34,8 +26,10 @@ export const register = async (
 	firstName: string,
 	lastName: string
 ) => {
-	const existingUser = await prisma.user.findUnique({
-		where: { email, username },
+	const existingUser = await prisma.user.findFirst({
+		where: {
+			OR: [{ email }, { username }],
+		},
 	});
 
 	if (existingUser) {

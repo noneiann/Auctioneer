@@ -1,0 +1,39 @@
+
+> frontend@0.1.0 build
+> next build
+
+   ▲ Next.js 15.4.1
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 3.0s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/11) ...
+Auctions data: []
+   Generating static pages (2/11) 
+   Generating static pages (5/11) 
+   Generating static pages (8/11) 
+ ✓ Generating static pages (11/11)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    1.51 kB         110 kB
+├ ○ /_not-found                            985 B         101 kB
+├ ○ /auctions                            9.19 kB         115 kB
+├ ƒ /auctions/[auctionId]                9.93 kB         118 kB
+├ ○ /login                               1.18 kB         105 kB
+├ ○ /register                            1.34 kB         105 kB
+├ ○ /seller                                485 B         104 kB
+├ ○ /seller/auctions                     3.21 kB         116 kB
+├ ƒ /seller/auctions/[auctionId]         3.35 kB         116 kB
+└ ○ /seller/auctions/create              6.11 kB         111 kB
++ First Load JS shared by all             100 kB
+  ├ chunks/87c73c54-1f4741035a95c140.js  54.1 kB
+  ├ chunks/902-6800fedce4c8303c.js       43.9 kB
+  └ other shared chunks (total)             2 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

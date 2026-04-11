@@ -6,9 +6,10 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface AuctionChatProps {
 	auctionId: string;
+    minimal?: boolean;
 }
 
-export default function AuctionChat({ auctionId }: AuctionChatProps) {
+export default function AuctionChat({ auctionId, minimal }: AuctionChatProps) {
 	const chatId = `auction-${auctionId}`;
 	const { user } = useAuth();
 	const {
@@ -25,6 +26,7 @@ export default function AuctionChat({ auctionId }: AuctionChatProps) {
 	} = useChatSocket(chatId);
 
 	const [messageInput, setMessageInput] = useState("");
+	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -59,32 +61,31 @@ export default function AuctionChat({ auctionId }: AuctionChatProps) {
 		}, 3000);
 	};
 
-	const handleDeleteMessage = (messageId: string) => {
-		if (window.confirm("Are you sure you want to delete this message?")) {
-			deleteMessage(messageId);
-		}
+	const handleDeleteConfirm = (messageId: string) => {
+        deleteMessage(messageId);
+        setConfirmDeleteId(null);
 	};
 
 	return (
-		<div className='flex flex-col h-[600px] bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden'>
+		<div className='flex flex-col h-[600px] bg-[#0f172a] rounded-lg border border-[#1e293b] overflow-hidden'>
 			{/* Header */}
-			<div className='bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700'>
+			<div className='bg-[#1e293b]/50 px-4 py-3 border-b border-[#1e293b]'>
 				<div className='flex items-center justify-between'>
-					<h3 className='font-medium text-gray-900 dark:text-white'>
+					<h3 className='font-medium text-white'>
 						Auction Chat
 					</h3>
 					<div className='flex items-center gap-3 text-sm'>
-						<span className='text-gray-500 dark:text-gray-400 flex items-center gap-1'>
+						<span className='text-brand-400 flex items-center gap-1'>
 							<Users className='w-4 h-4' />
 							{participantCount}
 						</span>
 						{isConnected ? (
-							<span className='text-green-600 flex items-center gap-1'>
+							<span className='text-emerald-400 flex items-center gap-1'>
 								<Wifi className='w-4 h-4' />
 								Live
 							</span>
 						) : (
-							<span className='text-gray-400 flex items-center gap-1'>
+							<span className='text-neutral-500 flex items-center gap-1'>
 								<WifiOff className='w-4 h-4' />
 								Offline
 							</span>
@@ -94,9 +95,9 @@ export default function AuctionChat({ auctionId }: AuctionChatProps) {
 			</div>
 
 			{/* Messages */}
-			<div className='flex-1 overflow-y-auto p-4 space-y-3'>
+			<div className='flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar'>
 				{messages.length === 0 ? (
-					<div className='h-full flex items-center justify-center text-gray-500 dark:text-gray-400'>
+					<div className='h-full flex items-center justify-center text-brand-500/50'>
 						<p>No messages yet. Start the conversation!</p>
 					</div>
 				) : (
@@ -109,34 +110,40 @@ export default function AuctionChat({ auctionId }: AuctionChatProps) {
 									isOwnMessage ? "justify-end" : "justify-start"
 								}`}>
 								<div
-									className={`max-w-[70%] rounded-lg px-4 py-2 ${
+									className={`max-w-[70%] rounded-xl px-4 py-2 border shadow-sm ${
 										isOwnMessage
-											? "bg-blue-600 text-white"
-											: "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+											? "bg-brand-600 text-white border-brand-500"
+											: "bg-[#1e293b] border-[#334155] text-brand-100"
 									}`}>
 									{!isOwnMessage && (
-										<p className='text-xs font-medium mb-1 opacity-75'>
-											{message.senderEmail}
+										<p className='text-xs font-semibold mb-1 opacity-80 text-brand-300'>
+											{message.senderUsername || message.senderName || message.senderEmail?.split('@')[0] || "User"}
 										</p>
 									)}
-									<p className='break-words'>{message.content}</p>
-									<div className='flex items-center justify-between mt-1 gap-2'>
+									<p className='break-words leading-relaxed text-sm'>{message.content}</p>
+									<div className='flex items-center justify-between mt-1.5 gap-3'>
 										<p
-											className={`text-xs ${
+											className={`text-[10px] uppercase tracking-wider font-medium ${
 												isOwnMessage
-													? "text-blue-100"
-													: "text-gray-500 dark:text-gray-400"
+													? "text-brand-200"
+													: "text-brand-400/70"
 											}`}>
 											{new Date(message.createdAt).toLocaleTimeString()}
 										</p>
-										{isOwnMessage && (
+										{isOwnMessage && confirmDeleteId !== message.id && (
 											<button
-												onClick={() => handleDeleteMessage(message.id)}
-												className='text-white/70 hover:text-white'
+												onClick={() => setConfirmDeleteId(message.id)}
+												className='text-white/50 hover:text-white transition-colors'
 												title='Delete message'>
-												<Trash2 className='w-3 h-3' />
+												<Trash2 className='w-3.5 h-3.5' />
 											</button>
 										)}
+										{isOwnMessage && confirmDeleteId === message.id && (
+                                            <div className="flex items-center gap-2 bg-black/20 px-2 py-0.5 rounded">
+                                                <button onClick={() => setConfirmDeleteId(null)} className="text-[10px] uppercase font-bold text-white/70 hover:text-white transition-colors">Cancel</button>
+                                                <button onClick={() => handleDeleteConfirm(message.id)} className="text-[10px] uppercase font-bold text-red-300 hover:text-red-200 transition-colors">Delete</button>
+                                            </div>
+                                        )}
 									</div>
 								</div>
 							</div>
@@ -147,7 +154,7 @@ export default function AuctionChat({ auctionId }: AuctionChatProps) {
 
 				{/* Typing Indicator */}
 				{typingUsers.length > 0 && (
-					<div className='text-sm text-gray-500 dark:text-gray-400 italic'>
+					<div className='text-xs text-brand-400 italic px-2'>
 						{typingUsers.length === 1
 							? "Someone is typing..."
 							: `${typingUsers.length} people are typing...`}
@@ -157,7 +164,7 @@ export default function AuctionChat({ auctionId }: AuctionChatProps) {
 
 			{/* Error Message */}
 			{error && (
-				<div className='px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm'>
+				<div className='px-4 py-2 bg-red-900/40 text-red-400 border-t border-red-900/50 text-sm'>
 					{error}
 				</div>
 			)}
@@ -165,27 +172,26 @@ export default function AuctionChat({ auctionId }: AuctionChatProps) {
 			{/* Input */}
 			<form
 				onSubmit={handleSendMessage}
-				className='border-t border-gray-200 dark:border-gray-700 p-4'>
-				<div className='flex gap-2'>
+				className='border-t border-[#1e293b] p-4 bg-[#0f172a]'>
+				<div className='flex gap-2 relative'>
 					<input
 						type='text'
 						value={messageInput}
 						onChange={handleInputChange}
 						onBlur={stopTyping}
 						placeholder='Type a message...'
-						className='flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+						className='flex-1 pl-4 pr-12 py-3 border border-[#1e293b] rounded-xl bg-[#020617] text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 placeholder-brand-600/50 outline-none transition-all'
 						disabled={!isConnected}
 						maxLength={1000}
 					/>
 					<button
 						type='submit'
 						disabled={!messageInput.trim() || isSending || !isConnected}
-						className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'>
+						className='absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-brand-600 text-white rounded-lg hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors'>
 						<Send className='w-4 h-4' />
-						{isSending ? "Sending..." : "Send"}
 					</button>
 				</div>
-				<p className='text-xs text-gray-500 dark:text-gray-400 mt-2'>
+				<p className='text-xs text-neutral-500 mt-2'>
 					{messageInput.length}/1000 characters
 				</p>
 			</form>

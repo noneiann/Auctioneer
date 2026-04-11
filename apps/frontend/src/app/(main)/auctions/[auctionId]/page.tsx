@@ -1,41 +1,99 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useKeenSlider } from "keen-slider/react";
-import "keen-slider/keen-slider.min.css";
 import Link from "next/link";
-import {
-	ChevronLeft,
-	ChevronRight,
-	Clock,
-	DollarSign,
-	ArrowLeft,
-} from "lucide-react";
-import LiveBidding from "@/components/auction/LiveBidding";
+import { Clock, ChevronRight, AlertCircle, Calendar, Tag, Hash } from "lucide-react";
+import { auctionApi, Auction } from "@/lib/AuctionApi";
+import AuctionImageViewer from "@/components/auction/AuctionImageViewer";
 import AuctionChat from "@/components/auction/AuctionChat";
+import AuctionBiddingPanel from "@/components/auction/AuctionBiddingPanel";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { toast } from "sonner";
 
-// Auction type
-type Auction = {
-	id: string;
-	startTime: string;
-	endTime: string;
-	startingBid: number;
-	category: string;
-	currentBid: number;
-	item: {
-		id: string;
-		name: string;
-		description: string;
-		imageUrl: string[];
-		type: string;
-	};
-	bids: {
-		id: string;
-		amount: number;
-		bidder: { id: string; name: string } | null;
-		createdAt: string;
-	}[];
-};
+type TabKey = "details";
+
+function useCountdown(endTime: string) {
+	const [timeLeft, setTimeLeft] = useState("");
+	const [urgency, setUrgency] = useState<"normal" | "warning" | "urgent" | "ended">("normal");
+
+	useEffect(() => {
+		const update = () => {
+			const now = Date.now();
+			const end = new Date(endTime).getTime();
+			const diff = end - now;
+
+			if (diff <= 0) {
+				setTimeLeft("Auction ended");
+				setUrgency("ended");
+				return;
+			}
+
+			if (diff < 1000 * 60 * 60) {
+				setUrgency("urgent");
+			} else if (diff < 1000 * 60 * 60 * 6) {
+				setUrgency("warning");
+			} else {
+				setUrgency("normal");
+			}
+
+			const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+			const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+			const minutes = Math.floor((diff / (1000 * 60)) % 60);
+			const seconds = Math.floor((diff / 1000) % 60);
+
+			if (days > 0) {
+				setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+			} else if (hours > 0) {
+				setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+			} else {
+				setTimeLeft(`${minutes}m ${seconds}s`);
+			}
+		};
+
+		update();
+		const timer = setInterval(update, 1000);
+		return () => clearInterval(timer);
+	}, [endTime]);
+
+	return { timeLeft, urgency };
+}
+
+function LoadingSkeleton() {
+	return (
+		<div className="max-w-7xl mx-auto px-6 md:px-16 py-8">
+			<Skeleton className="h-4 w-48 mb-6" />
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 mt-6">
+				<Skeleton className="aspect-square w-full rounded-xl" />
+				<div className="flex flex-col gap-4">
+					<Skeleton className="h-5 w-24" />
+					<Skeleton className="h-9 w-3/4" />
+					<Skeleton className="h-4 w-40" />
+					<Skeleton className="h-40 w-full rounded-xl" />
+					<Skeleton className="h-10 w-full rounded-lg" />
+					<Skeleton className="h-4 w-full" />
+					<Skeleton className="h-4 w-5/6" />
+					<Skeleton className="h-4 w-2/3" />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function ErrorState({ message }: { message: string }) {
+	return (
+		<div className="max-w-7xl mx-auto px-6 md:px-16 py-24 flex flex-col items-center justify-center text-center gap-4">
+			<AlertCircle className="w-12 h-12 text-neutral-400" />
+			<h2 className="text-xl font-semibold text-foreground">Something went wrong</h2>
+			<p className="text-neutral-500">{message}</p>
+			<Link href="/auctions">
+				<Button variant="secondary">Back to Auctions</Button>
+			</Link>
+		</div>
+	);
+}
 
 export default function AuctionInfoPage() {
 	const params = useParams();
@@ -45,39 +103,18 @@ export default function AuctionInfoPage() {
 
 	const [auction, setAuction] = useState<Auction | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [timeLeft, setTimeLeft] = useState<string>("");
-	const [selectedIndex, setSelectedIndex] = useState(0);
-	const [bidAmount, setBidAmount] = useState(0);
 	const [error, setError] = useState("");
-	const [showBidInput, setShowBidInput] = useState(false);
-
-	// Slider
-	const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
-		initial: 0,
-		loop: true,
-		slideChanged(slider) {
-			setSelectedIndex(slider.track.details.rel);
-		},
-	});
 
 	useEffect(() => {
 		const fetchAuction = async () => {
+			if (!id) return;
 			try {
-				if (!id) return;
-				const token = getTokenFromStorage();
-				if (!token) return;
-
-				const res = await fetch(`http://localhost:4000/auctions/${id}`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-
-				if (!res.ok) throw new Error("Auction not found");
-
-				const data = await res.json();
-				setAuction(data.data);
-				setBidAmount(data.data.currentBid);
+				const res = await auctionApi.getAuctionById(id);
+				setAuction(res.data);
 			} catch (err) {
-				console.error("Failed to fetch auction:", err);
+				const message = err instanceof Error ? err.message : "Failed to load auction";
+				setError(message);
+				toast.error(message);
 			} finally {
 				setLoading(false);
 			}
@@ -85,253 +122,151 @@ export default function AuctionInfoPage() {
 		fetchAuction();
 	}, [id]);
 
-	function getTokenFromStorage(): string | null {
-		const stored = localStorage.getItem("auth-storage");
-		if (!stored) return null;
-		try {
-			const parsed = JSON.parse(stored);
-			return parsed?.state?.token ?? null;
-		} catch (err) {
-			console.error("Failed to parse auth-storage", err);
-			return null;
-		}
-	}
+	if (loading) return <LoadingSkeleton />;
+	if (error || !auction) return <ErrorState message={error || "Auction not found"} />;
 
-	// Countdown timer
-	useEffect(() => {
-		if (!auction) return;
-		const interval = setInterval(() => {
-			const now = new Date().getTime();
-			const end = new Date(auction.endTime).getTime();
-			const diff = end - now;
-			if (diff <= 0) {
-				setTimeLeft("Auction ended");
-				clearInterval(interval);
-				return;
-			}
-			const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-			const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-			const minutes = Math.floor((diff / (1000 * 60)) % 60);
-			const seconds = Math.floor((diff / 1000) % 60);
-			setTimeLeft(
-				`${days > 0 ? `${days}d ` : ""}${hours}h ${minutes}m ${seconds}s`
-			);
-		}, 1000);
-		return () => clearInterval(interval);
-	}, [auction]);
+	return <AuctionContent auction={auction} />;
+}
 
-	// Bid logic
-	const handleIncrement = (amount: number) => {
-		setBidAmount((prev) => prev + amount);
-	};
-
-	const handleBid = () => {
-		if (!auction) return null;
-
-		if (bidAmount < minAllowedBid) {
-			setError(`Your bid must be at least ₱${minAllowedBid.toLocaleString()}`);
-			return;
-		}
-
-		setError("");
-
-		// Placeholder logic: update local state only
-		setAuction((prev: any) =>
-			prev ? { ...prev, currentBid: bidAmount } : prev
-		);
-
-		alert(`✅ Bid placed: ₱${bidAmount.toLocaleString()}`);
-		setBidAmount(0);
-	};
-
-	if (loading) return <p className='p-6'>Loading auction...</p>;
-	if (!auction) return <p className='p-6'>Auction not found.</p>;
-	const minAllowedBid = Math.max(auction.startingBid, auction.currentBid);
-
-	const highestBid = auction.bids.length
-		? auction.bids.reduce(
-				(max, b) => (b.amount > max.amount ? b : max),
-				auction.bids[0]
-		  )
-		: null;
+function AuctionContent({ auction }: { auction: Auction }) {
+	const { timeLeft, urgency } = useCountdown(auction.endTime);
 
 	return (
-		<div className='max-w-6xl mx-auto p-6 animate-fade-in'>
-			{/* Breadcrumbs */}
-			<div className='text-sm text-gray-500 mb-4'>
-				<Link href='/' className='hover:underline'>
-					Home
-				</Link>{" "}
-				{">"}{" "}
-				<Link href='/auctions' className='hover:underline'>
-					Auctions
-				</Link>{" "}
-				{">"}{" "}
-				<span className='text-gray-700 font-medium'>{auction.item.name}</span>
-			</div>
-
-			<div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
-				{/* Image Section */}
-				<div className='flex gap-4'>
-					{/* Thumbnails */}
-					<div className='flex flex-col gap-2 overflow-y-auto max-h-[500px]'>
-						{auction.item.imageUrl.map((img, i) => (
-							<button
-								key={i}
-								onClick={() => instanceRef.current?.moveToIdx(i)}
-								className={`w-20 h-20 rounded-md overflow-hidden border ${
-									selectedIndex === i
-										? "border-main"
-										: "border-transparent hover:border-gray-300"
-								}`}>
-								<img
-									src={img}
-									alt={`Thumbnail ${i}`}
-									className='w-full h-full object-cover'
-								/>
-							</button>
-						))}
-					</div>
-
-					{/* Main Carousel */}
-					<div className='flex-1 rounded-xl overflow-hidden relative'>
-						<div
-							ref={sliderRef}
-							className='keen-slider rounded-xl aspect-square'>
-							{auction.item.imageUrl.map((img, i) => (
-								<div key={i} className='keen-slider__slide'>
-									<img
-										src={img}
-										alt={`Image ${i}`}
-										className='w-full h-full object-cover rounded-xl'
-									/>
-								</div>
-							))}
-						</div>
-
-						{/* Dots */}
-						<div className='absolute bottom-3 w-full flex justify-center gap-2'>
-							{auction.item.imageUrl.map((_, i) => (
-								<div
-									key={i}
-									className={`w-2.5 h-2.5 rounded-full ${
-										selectedIndex === i ? "bg-main" : "bg-gray-300"
-									} transition`}></div>
-							))}
-						</div>
-
-						{/* Controls */}
-						<button
-							onClick={() => instanceRef.current?.prev()}
-							className='absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full'>
-							<ChevronLeft size={20} />
-						</button>
-						<button
-							onClick={() => instanceRef.current?.next()}
-							className='absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full'>
-							<ChevronRight size={20} />
-						</button>
-					</div>
-				</div>
-
-				{/* Item Info Section */}
-				<div className='flex flex-col gap-4'>
-					<h1 className='text-3xl font-bold'>{auction.item.name}</h1>
-					<span className='text-sm text-gray-500 capitalize'>
-						Category: {auction.category}
+		<div className="w-full min-h-screen bg-[#020617]">
+			<div className="max-w-7xl mx-auto px-6 md:px-16 py-8">
+				{/* Breadcrumb */}
+				<nav className="flex items-center gap-1.5 text-sm text-brand-300 mb-6">
+					<Link href="/" className="hover:text-white transition-colors">
+						Home
+					</Link>
+					<ChevronRight className="w-3.5 h-3.5" />
+					<Link href="/auctions" className="hover:text-white transition-colors">
+						Auctions
+					</Link>
+					<ChevronRight className="w-3.5 h-3.5" />
+					<span className="text-white font-medium truncate max-w-[200px]">
+						{auction.item.name}
 					</span>
-					<p className='text-base text-gray-700 dark:text-gray-300'>
-						{auction.item.description}
-					</p>
+				</nav>
 
-					{/* Current Bid + Timer */}
-					<div className='bg-gray-100 dark:bg-[#222] p-4 rounded-md mt-4'>
-						<div className='text-xl font-semibold'>
-							<DollarSign className='inline mr-1 text-green-500' />
-							Current Bid:
-							<span className='text-main font-bold ml-2'>
-								₱{auction.currentBid.toLocaleString()}
-							</span>
-						</div>
-						{highestBid && (
-							<div className='text-sm text-gray-600 dark:text-gray-400'>
-								Bidder: {highestBid.bidder?.name ?? "Anonymous"}
-							</div>
-						)}
-						<div className='text-sm text-gray-600 dark:text-gray-400 mt-2'>
-							<Clock className='inline mr-1 text-red-500' />
-							Ends in: {timeLeft}
-						</div>
-					</div>
+				{/* Two-Column E-commerce Layout */}
+				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 relative">
+					{/* Left Column - Media & Details (8 columns) */}
+					<div className="lg:col-span-8 flex flex-col gap-8">
+						{/* Main Image Viewer */}
+						<AuctionImageViewer images={auction.item.imageUrl} />
 
-					{/* Place a Bid */}
-					{!showBidInput ? (
-						<button
-							onClick={() => setShowBidInput(true)}
-							className='mt-4 w-full bg-main text-white py-2 px-4 rounded-lg text-sm font-semibold bg-main-hover transition cursor-pointer'>
-							Place a Bid
-						</button>
-					) : (
-						<div className='mt-4 p-4 border border-main rounded-lg bg-[var(--background)] space-y-4'>
-							{/* Bid Input */}
-							<div>
-								<label className='block text-sm font-medium mb-1 text-[var(--foreground)]'>
-									Enter your bid
-								</label>
-								<input
-									type='number'
-									value={bidAmount || ""}
-									onChange={(e) => setBidAmount(Number(e.target.value))}
-									className='w-full border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--main)] text-sm bg-transparent text-[var(--foreground)]'
-									min={minAllowedBid}
-									placeholder={`Min ₱${minAllowedBid.toLocaleString()}`}
-								/>
-								{error && <p className='text-red-500 text-sm mt-1'>{error}</p>}
+						{/* Product Title & Basic Info */}
+						<div>
+							<div className="flex items-center gap-3 mb-3">
+								<Badge variant="category">{auction.category}</Badge>
+								<span className="text-sm text-brand-300 flex items-center gap-1">
+									<Hash className="w-3.5 h-3.5" />
+									ID: {auction.id.slice(-8)}
+								</span>
 							</div>
 
-							{/* Quick Increments */}
-							<div className='flex gap-2'>
-								{[10, 100, 1000].map((inc) => (
-									<button
-										key={inc}
-										onClick={() => handleIncrement(inc)}
-										className='px-4 py-1 bg-gray-200 dark:bg-[#2a2a2a] hover:bg-gray-300 dark:hover:bg-[#3a3a3a] text-sm rounded-md text-[var(--foreground)] cursor-pointer'>
-										+{inc}
-									</button>
-								))}
-							</div>
+							<h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-2">
+								{auction.item.name}
+							</h1>
 
-							{/* Submit */}
-							<button
-								onClick={handleBid}
-								className='w-full bg-main text-white py-2 px-4 rounded-lg text-sm font-semibold bg-main-hover transition cursor-pointer'>
-								Submit Bid
-							</button>
-						</div>
-					)}
-
-					{/* Bid History */}
-					<div>
-						<h2 className='text-xl font-semibold mb-3'>Recent Bids</h2>
-						<div className='space-y-2 max-h-[200px] overflow-y-auto'>
-							{auction.bids.length > 0 ? (
-								auction.bids.map((bid) => (
-									<div
-										key={bid.id}
-										className='flex justify-between p-2 border rounded-md bg-gray-50 dark:bg-[#171717]'>
-										<span>{bid.bidder?.name ?? "Anonymous"}</span>
-										<span className='font-bold'>
-											₱{bid.amount.toLocaleString()}
-										</span>
-									</div>
-								))
-							) : (
-								<p className='text-gray-500'>No bids yet.</p>
+							{auction.owner && (
+								<p className="text-sm text-brand-300">
+									Seller: <span className="text-white font-medium hover:underline cursor-pointer">{auction.owner.firstName || "User"} {auction.owner.lastName || ""}</span>
+									<span className="mx-2 text-brand-700">•</span>
+									<span className="text-brand-400">98% Positive Feedback</span>
+								</p>
 							)}
 						</div>
+
+						{/* Description */}
+						<div className="prose prose-invert prose-brand max-w-none">
+							<h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+								Description
+							</h3>
+							<div className="text-brand-200 leading-relaxed whitespace-pre-wrap bg-[#0f172a]/30 p-6 rounded-xl border border-[#1e293b]">
+								{auction.item.description}
+							</div>
+						</div>
+
+						{/* Details Grid */}
+						<div>
+							<h3 className="text-lg font-semibold text-white mb-3">Item Details</h3>
+							<DetailsTab auction={auction} />
+						</div>
+					</div>
+
+					{/* Right Column - Sticky Bidding Panel (4 columns) */}
+					<div className="lg:col-span-4">
+						<div>
+							{/* New Bidding Panel Component */}
+							<AuctionBiddingPanel
+								auction={auction}
+								timeLeft={timeLeft}
+								urgency={urgency}
+							/>
+
+							{/* Trust/Safety Badges (Optional addition below panel) */}
+							<div className="mt-4 grid grid-cols-2 gap-3">
+								<div className="bg-[#0f172a]/30 p-3 rounded-lg border border-[#1e293b] flex flex-col items-center text-center gap-2">
+									<div className="p-1.5 bg-emerald-500/10 rounded-full text-emerald-500">
+										<Tag className="w-4 h-4" />
+									</div>
+									<p className="text-xs text-brand-300 font-medium">Buyer Protection</p>
+								</div>
+								<div className="bg-[#0f172a]/30 p-3 rounded-lg border border-[#1e293b] flex flex-col items-center text-center gap-2">
+									<div className="p-1.5 bg-blue-500/10 rounded-full text-blue-500">
+										<Calendar className="w-4 h-4" />
+									</div>
+									<p className="text-xs text-brand-300 font-medium">Fast Shipping</p>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
+		</div>
+	);
+}
+
+function DetailsTab({ auction }: { auction: Auction }) {
+	const details = [
+		{
+			icon: <Calendar className="w-4 h-4 text-brand-400" />,
+			label: "Start Time",
+			value: new Date(auction.startTime).toLocaleString(),
+		},
+		{
+			icon: <Calendar className="w-4 h-4 text-brand-400" />,
+			label: "End Time",
+			value: new Date(auction.endTime).toLocaleString(),
+		},
+		{
+			icon: <Tag className="w-4 h-4 text-brand-400" />,
+			label: "Category",
+			value: auction.category,
+		},
+		{
+			icon: <Hash className="w-4 h-4 text-brand-400" />,
+			label: "Auction ID",
+			value: auction.id,
+		},
+	];
+
+	return (
+		<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			{details.map((detail) => (
+				<div
+					key={detail.label}
+					className="flex items-start gap-3 bg-[#0f172a]/50 rounded-lg p-4 border border-[#1e293b]"
+				>
+					<div className="mt-0.5">{detail.icon}</div>
+					<div>
+						<p className="text-xs text-brand-400 uppercase tracking-wider">{detail.label}</p>
+						<p className="text-sm font-medium text-white mt-0.5 break-all">{detail.value}</p>
+					</div>
+				</div>
+			))}
 		</div>
 	);
 }

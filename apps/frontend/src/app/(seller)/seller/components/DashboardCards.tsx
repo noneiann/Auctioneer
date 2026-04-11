@@ -1,91 +1,107 @@
-import React from "react";
-import { DollarSign, Hammer, RefreshCw, Package } from "lucide-react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 
-const dashboardStats = [
+import React, { useEffect, useState } from "react";
+import { DollarSign, Hammer, RefreshCw, Package, TrendingUp } from "lucide-react";
+import api from "@/lib/api";
+
+const statConfig = [
 	{
-		title: "Total Sales",
-		value: "$12,450",
-		change: "+12%",
-		changeType: "positive",
+		key: "revenue",
+		title: "Revenue",
+		prefix: "$",
 		icon: DollarSign,
-		description: "This month",
+		description: "Estimated earnings",
+		accentClass: "text-emerald-400",
+		bgClass: "bg-emerald-500/8",
 	},
 	{
-		title: "Active Auctions",
-		value: "23",
-		change: "+5",
-		changeType: "positive",
+		key: "totalAuctions",
+		title: "Auctions",
 		icon: Hammer,
-		description: "Currently running",
+		description: "Currently active",
+		accentClass: "text-brand-400",
+		bgClass: "bg-brand-500/8",
 	},
 	{
-		title: "Barter Deals",
-		value: "8",
-		change: "+2",
-		changeType: "positive",
+		key: "totalBarters",
+		title: "Barters",
 		icon: RefreshCw,
-		description: "This week",
+		description: "Pending or closed",
+		accentClass: "text-purple-400",
+		bgClass: "bg-purple-500/8",
 	},
 	{
-		title: "Total Items",
-		value: "156",
-		change: "+15",
-		changeType: "positive",
+		key: "totalSales",
+		title: "Direct Sales",
 		icon: Package,
-		description: "In inventory",
+		description: "Items sold directly",
+		accentClass: "text-amber-400",
+		bgClass: "bg-amber-500/8",
 	},
 ];
 
 export default function DashboardCards() {
+	const [stats, setStats] = useState<Record<string, unknown> | null>(null);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		const fetchStats = async () => {
+			try {
+				const response = await api.get("/users/stats");
+				if (response && response.success) setStats(response.data);
+			} catch {
+				// silently fail
+			} finally {
+				setLoading(false);
+			}
+		};
+		fetchStats();
+	}, []);
+
 	return (
-		<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-			{dashboardStats.map((stat, index) => {
-				const IconComponent = stat.icon;
+		<div>
+			<div className="mb-6">
+				<p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4a4a4a]">Overview</p>
+				<h1 className="text-2xl font-bold text-white mt-0.5">Dashboard</h1>
+			</div>
 
-				return (
-					<div
-						key={index}
-						className={`bg-background rounded-lg shadow-sm border border-foreground/10 p-6 hover:shadow-md transition-all hover:border-main/30 ${
-							index === 0
-								? "animate-fade-in"
-								: index === 1
-								? "animate-fade-in-delay"
-								: index === 2
-								? "animate-fade-in-delay-2"
-								: "animate-fade-in"
-						}`}>
-						<div className='flex items-center justify-between'>
-							<div>
-								<p className='text-sm font-medium text-foreground/70'>
-									{stat.title}
+			<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+				{statConfig.map((s, i) => {
+					const Icon = s.icon;
+					const raw = stats?.[s.key];
+					const value = loading
+						? "—"
+						: s.prefix
+						? `${s.prefix}${Number(raw || 0).toLocaleString()}`
+						: String(raw || 0);
+
+					return (
+						<div
+							key={s.key}
+							className={`bg-[#181818] border border-[#1f1f1f] rounded-xl p-5 hover:border-[#2a2a2a] transition-all ${
+								i === 0 ? "animate-fade-in" : i === 1 ? "animate-fade-in-delay" : i === 2 ? "animate-fade-in-delay-2" : "animate-fade-in-delay-3"
+							}`}
+						>
+							<div className="flex items-start justify-between mb-4">
+								<p className="text-[11px] font-semibold uppercase tracking-wider text-[#4a4a4a]">
+									{s.title}
 								</p>
-								<p className='text-2xl font-bold text-foreground mt-2'>
-									{stat.value}
-								</p>
+								<div className={`w-8 h-8 rounded-lg flex items-center justify-center ${s.bgClass}`}>
+									<Icon className={`w-4 h-4 ${s.accentClass}`} />
+								</div>
 							</div>
-							<div className='p-3 bg-main/10 rounded-full'>
-								<IconComponent size={24} className='text-main' />
+							<p className={`text-2xl font-bold text-white ${loading ? "animate-pulse" : ""}`}>
+								{value}
+							</p>
+							<div className="flex items-center gap-1.5 mt-2">
+								<TrendingUp className="w-3 h-3 text-emerald-400" />
+								<p className="text-[11px] text-[#4a4a4a]">{s.description}</p>
 							</div>
 						</div>
-
-						<div className='mt-4 flex items-center justify-between'>
-							<div className='flex items-center'>
-								<span
-									className={`text-sm font-medium ${
-										stat.changeType === "positive"
-											? "text-green-600"
-											: "text-red-600"
-									}`}>
-									{stat.change}
-								</span>
-								<span className='text-sm text-foreground/50 ml-2'>
-									{stat.description}
-								</span>
-							</div>
-						</div>
-					</div>
-				);
-			})}
+					);
+				})}
+			</div>
 		</div>
 	);
 }

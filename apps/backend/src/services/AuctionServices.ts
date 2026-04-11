@@ -1,15 +1,26 @@
 import prisma from "@auctioneer/db";
-import {
-	ApiResponse,
-	GetUserRequest,
-	RegisterRequest,
-	LoginRequest,
-	CreateAuctionPayload,
-} from "@auctioneer/types/src";
-import bcrypt from "bcrypt";
-import { get } from "http";
-import { getAuction, updateAuction } from "../controllers/AuctionController";
+import { Prisma, ItemType } from "@auctioneer/db/generated/prisma";
+import { CreateAuctionPayload } from "@auctioneer/types/src";
 import itemServices from "./ItemServices";
+
+const userSelect = {
+	id: true,
+	email: true,
+	username: true,
+	firstName: true,
+	lastName: true,
+	permission: true,
+	createdAt: true,
+	updatedAt: true,
+};
+
+type ListAuctionsOptions = {
+	page?: number;
+	pageSize?: number;
+	category?: string;
+	ownerId?: string;
+	itemType?: ItemType;
+};
 
 const auctionServices = {
 	createAuction: async (data: CreateAuctionPayload): Promise<any> => {
@@ -19,6 +30,7 @@ const auctionServices = {
 					startTime: data.startTime,
 					endTime: data.endTime,
 					startingBid: data.startingBid,
+					currentBid: data.startingBid,
 					category: data.category,
 					// you can let Prisma set currentBid to default if you omit it:
 					// currentBid: data.startingBid,
@@ -32,7 +44,7 @@ const auctionServices = {
 					// no bids to create initially
 				},
 				include: {
-					owner: true,
+					owner: { select: userSelect },
 					item: true,
 				},
 			});
@@ -49,12 +61,13 @@ const auctionServices = {
 			const auction = await prisma.auction.findUnique({
 				where: { id },
 				include: {
-					owner: true,
+					owner: { select: userSelect },
 					item: true,
 					bids: {
 						include: {
-							bidder: true, // if you want bidder info as well
+							bidder: { select: userSelect },
 						},
+						orderBy: { createdAt: "desc" },
 					},
 				},
 			});
@@ -70,20 +83,42 @@ const auctionServices = {
 		}
 	},
 
-	listAuctions: async () => {
+	listAuctions: async (options: ListAuctionsOptions = {}) => {
 		try {
-			const auctions = await prisma.auction.findMany({
+			const page = Math.max(1, options.page || 1);
+			const pageSize = Math.min(Math.max(1, options.pageSize || 20), 100);
+			const where: Prisma.auctionWhereInput = {};
+
+			if (options.category) {
+				where.category = options.category;
+			}
+			if (options.ownerId) {
+				where.ownerId = options.ownerId;
+			}
+			if (options.itemType) {
+				where.item = { type: options.itemType };
+			}
+
+			const [items, total] = await prisma.$transaction([
+				prisma.auction.findMany({
+				where,
+				skip: (page - 1) * pageSize,
+				take: pageSize,
+				orderBy: { createdAt: "desc" },
 				include: {
-					owner: true,
+					owner: { select: userSelect },
 					item: true,
 					bids: {
 						include: {
-							bidder: true, // if you want bidder info as well
+							bidder: { select: userSelect },
 						},
+						orderBy: { createdAt: "desc" },
 					},
 				},
-			});
-			return auctions;
+			}),
+				prisma.auction.count({ where }),
+			]);
+			return { items, total };
 		} catch (error: any) {
 			console.error("Error listing auctions:", error);
 			throw new Error(error?.message || "Failed to list auctions");
@@ -95,15 +130,16 @@ const auctionServices = {
 			const auctions = await prisma.auction.findMany({
 				where: { ownerId: userId },
 				include: {
-					owner: true,
+					owner: { select: userSelect },
 					item: true,
 					bids: {
 						include: {
-							bidder: true,
+							bidder: { select: userSelect },
 						},
+						orderBy: { createdAt: "desc" },
 					},
 				},
-				orderBy: { createdAt: 'desc' },
+				orderBy: { createdAt: "desc" },
 			});
 			return auctions;
 		} catch (error: any) {
@@ -169,7 +205,7 @@ const auctionServices = {
 				where: { id },
 				data: auctionUpdateData,
 				include: {
-					owner: true,
+					owner: { select: userSelect },
 					item: true,
 				},
 			});

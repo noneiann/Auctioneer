@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { JwtPayloadUser } from "@auctioneer/types";
+import prisma from "@auctioneer/db";
 
 interface AuthenticatedSocket extends Socket {
 	data: {
@@ -7,8 +8,6 @@ interface AuthenticatedSocket extends Socket {
 	};
 }
 
-// In-memory storage for chat messages (replace with database in production)
-const chatRooms = new Map<string, any[]>();
 const typingUsers = new Map<string, Set<string>>();
 
 export default function chatWebSocket(io: Server, socket: AuthenticatedSocket) {
@@ -19,22 +18,37 @@ export default function chatWebSocket(io: Server, socket: AuthenticatedSocket) {
 		"join_chat",
 		async (data: { chatId: string; chatType?: "auction" | "direct" }) => {
 			try {
-				const { chatId, chatType = "auction" } = data;
+				const { chatId } = data;
 				const roomName = `chat:${chatId}`;
 
 				socket.join(roomName);
 				console.log(`User ${user?.email} joined chat ${chatId}`);
 
-				// Initialize chat room if it doesn't exist
-				if (!chatRooms.has(chatId)) {
-					chatRooms.set(chatId, []);
-				}
-
 				// Send chat history to the user
-				const messages = chatRooms.get(chatId) || [];
+				const messages = await prisma.chatMessage.findMany({
+					where: { conversationId: chatId },
+					orderBy: { createdAt: "desc" },
+					take: 50,
+					include: {
+						sender: { select: { email: true } },
+					},
+				});
+
+				const history = messages
+					.slice()
+					.reverse()
+					.map((message) => ({
+						id: message.id,
+						chatId: message.conversationId,
+						senderId: message.senderId,
+						senderEmail: message.sender.email,
+						content: message.content,
+						createdAt: message.createdAt.toISOString(),
+						read: message.read,
+					}));
 				socket.emit("chat_history", {
 					chatId,
-					messages: messages.slice(-50), // Last 50 messages
+					messages: history,
 					participantCount: io.sockets.adapter.rooms.get(roomName)?.size || 0,
 				});
 
@@ -93,21 +107,31 @@ export default function chatWebSocket(io: Server, socket: AuthenticatedSocket) {
 					return;
 				}
 
-				// Create message object
-				const newMessage = {
-					id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-					chatId,
-					senderId: user?.userId,
-					senderEmail: user?.email,
-					content: message.trim(),
-					createdAt: new Date().toISOString(),
-					read: false,
-				};
+				if (!user?.userId || !user?.email) {
+					socket.emit("message_error", { message: "Unauthorized" });
+					return;
+				}
 
-				// Store message in memory (replace with database)
-				const messages = chatRooms.get(chatId) || [];
-				messages.push(newMessage);
-				chatRooms.set(chatId, messages);
+				const savedMessage = await prisma.chatMessage.create({
+					data: {
+						conversationId: chatId,
+						senderId: user.userId,
+						content: message.trim(),
+					},
+					include: {
+						sender: { select: { email: true } },
+					},
+				});
+
+				const newMessage = {
+					id: savedMessage.id,
+					chatId: savedMessage.conversationId,
+					senderId: savedMessage.senderId,
+					senderEmail: savedMessage.sender.email,
+					content: savedMessage.content,
+					createdAt: savedMessage.createdAt.toISOString(),
+					read: savedMessage.read,
+				};
 
 				// Broadcast to all users in chat room
 				const roomName = `chat:${chatId}`;
@@ -172,63 +196,70 @@ export default function chatWebSocket(io: Server, socket: AuthenticatedSocket) {
 	});
 
 	// Mark messages as read
-	socket.on("mark_read", (data: { chatId: string; messageIds: string[] }) => {
-		const { chatId, messageIds } = data;
-		const roomName = `chat:${chatId}`;
-
-		// Update messages in memory (replace with database)
-		const messages = chatRooms.get(chatId) || [];
-		messages.forEach((msg) => {
-			if (messageIds.includes(msg.id)) {
-				msg.read = true;
-			}
-		});
-
-		// Notify others that messages were read
-		socket.to(roomName).emit("messages_read", {
-			chatId,
-			messageIds,
-			readBy: user?.userId,
-		});
-	});
-
-	// Delete message (optional feature)
-	socket.on("delete_message", (data: { chatId: string; messageId: string }) => {
-		try {
-			const { chatId, messageId } = data;
-			const messages = chatRooms.get(chatId) || [];
-
-			// Find message and verify ownership
-			const messageIndex = messages.findIndex((m) => m.id === messageId);
-			if (messageIndex === -1) {
-				socket.emit("error", { message: "Message not found" });
-				return;
-			}
-
-			const message = messages[messageIndex];
-			if (message.senderId !== user?.userId) {
-				socket.emit("error", {
-					message: "Cannot delete someone else's message",
-				});
-				return;
-			}
-
-			// Remove message
-			messages.splice(messageIndex, 1);
-			chatRooms.set(chatId, messages);
-
-			// Broadcast deletion to all users in chat room
+	socket.on(
+		"mark_read",
+		async (data: { chatId: string; messageIds: string[] }) => {
+			const { chatId, messageIds } = data;
 			const roomName = `chat:${chatId}`;
-			io.to(roomName).emit("message_deleted", {
-				chatId,
-				messageId,
-				deletedBy: user?.userId,
+
+			// Update messages in database
+			await prisma.chatMessage.updateMany({
+				where: { id: { in: messageIds }, conversationId: chatId },
+				data: { read: true },
 			});
 
-			console.log(`Message ${messageId} deleted by ${user?.email}`);
-		} catch (error) {
-			console.error("Error deleting message:", error);
-			socket.emit("error", { message: "Failed to delete message" });
+			// Notify others that messages were read
+			socket.to(roomName).emit("messages_read", {
+				chatId,
+				messageIds,
+				readBy: user?.userId,
+			});
 		}
-	});
+	);
+
+	// Delete message (optional feature)
+	socket.on(
+		"delete_message",
+		async (data: { chatId: string; messageId: string }) => {
+			try {
+				const { chatId, messageId } = data;
+				if (!user?.userId) {
+					socket.emit("error", { message: "Unauthorized" });
+					return;
+				}
+
+				const message = await prisma.chatMessage.findUnique({
+					where: { id: messageId },
+					select: { senderId: true, conversationId: true },
+				});
+
+				if (!message || message.conversationId !== chatId) {
+					socket.emit("error", { message: "Message not found" });
+					return;
+				}
+
+				if (message.senderId !== user.userId) {
+					socket.emit("error", {
+						message: "Cannot delete someone else's message",
+					});
+					return;
+				}
+
+				await prisma.chatMessage.delete({ where: { id: messageId } });
+
+				// Broadcast deletion to all users in chat room
+				const roomName = `chat:${chatId}`;
+				io.to(roomName).emit("message_deleted", {
+					chatId,
+					messageId,
+					deletedBy: user?.userId,
+				});
+
+				console.log(`Message ${messageId} deleted by ${user?.email}`);
+			} catch (error) {
+				console.error("Error deleting message:", error);
+				socket.emit("error", { message: "Failed to delete message" });
+			}
+		}
+	);
 }

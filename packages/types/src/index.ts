@@ -99,6 +99,7 @@ export interface Item {
   type: ItemType;
   price?: number;
   status: ItemStatus;
+  category: string;
   createdAt: Date;
   updatedAt: Date;
   ownerId: string;
@@ -110,5 +111,6 @@ export interface CreateItemPayload {
   type: ItemType;
 
   price?: number;
+  category: string;
   ownerId: string;
 }

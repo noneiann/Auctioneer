@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { Poppins, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Navbar from "@/components/layout/Navbar";
 import { SocketProvider } from "@/contexts/SocketContext";
+import { Toaster } from "sonner";
 
 const poppins = Poppins({
 	variable: "--font-poppins",
 	subsets: ["latin"],
-	weight: ["400", "500", "600", "700"], // Adjust weights as needed
+	weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -28,8 +27,11 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang='en'>
-			<body className={`${poppins.variable} ${poppins.variable} antialiased`}>
-				<SocketProvider>{children}</SocketProvider>
+			<body className={`${poppins.variable} ${geistMono.variable} antialiased`}>
+				<SocketProvider>
+					{children}
+					<Toaster position='bottom-right' richColors />
+				</SocketProvider>
 			</body>
 		</html>
 	);

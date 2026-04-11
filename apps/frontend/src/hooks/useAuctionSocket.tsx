@@ -1,22 +1,10 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useSocket } from "@/contexts/SocketContext";
-
-interface Bid {
-	id: string;
-	amount: number;
-	bidderId: string;
-	bidder: {
-		id: string;
-		username: string;
-		firstName: string;
-		lastName: string;
-	};
-	createdAt: string;
-}
+import type { Auction, AuctionBid } from "@/lib/AuctionApi";
 
 interface AuctionState {
-	auction: any;
+	auction: Auction | null;
 	isActive: boolean;
 	participantCount: number;
 }
@@ -24,7 +12,7 @@ interface AuctionState {
 export function useAuctionSocket(auctionId: string | null) {
 	const { socket, isConnected } = useSocket();
 	const [auctionState, setAuctionState] = useState<AuctionState | null>(null);
-	const [recentBids, setRecentBids] = useState<Bid[]>([]);
+	const [recentBids, setRecentBids] = useState<AuctionBid[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [isBidding, setIsBidding] = useState(false);
 
@@ -43,7 +31,7 @@ export function useAuctionSocket(auctionId: string | null) {
 		});
 
 		// Listen for new bids
-		socket.on("bid_placed", (data: { bid: Bid; auction: any }) => {
+		socket.on("bid_placed", (data: { bid: AuctionBid; auction: Auction }) => {
 			setRecentBids((prev) => [data.bid, ...prev.slice(0, 9)]);
 			setAuctionState((prev) =>
 				prev ? { ...prev, auction: data.auction } : null
@@ -58,13 +46,13 @@ export function useAuctionSocket(auctionId: string | null) {
 		});
 
 		// Listen for bid success
-		socket.on("bid_success", (data: { bid: Bid; auction: any }) => {
+		socket.on("bid_success", () => {
 			setIsBidding(false);
 			setError(null);
 		});
 
 		// Listen for auction ended
-		socket.on("auction_ended", (data: { auction: any; message: string }) => {
+		socket.on("auction_ended", (data: { auction: Auction; message: string }) => {
 			setAuctionState((prev) =>
 				prev ? { ...prev, auction: data.auction, isActive: false } : null
 			);

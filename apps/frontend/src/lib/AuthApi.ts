@@ -9,12 +9,15 @@ type RegisterBody = {
 	lastName: string;
 };
 
+const API_BASE_URL =
+	process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
 async function login(
 	email: string,
 	password: string
 ): Promise<ApiResponse<{ user: User; token: string }>> {
 	const req: ApiRequest<LoginBody> = {
-		url: "http://localhost:4000/auth/login",
+		url: `${API_BASE_URL}/auth/login`,
 		method: "POST",
 		body: { email, password },
 		headers: { "Content-Type": "application/json" },
@@ -26,7 +29,10 @@ async function login(
 		body: JSON.stringify(req.body),
 	});
 	const data: ApiResponse<{ user: User; token: string }> = await res.json();
-	if (!res.ok) throw new Error((data.data as any) || "Login failed");
+	if (!res.ok) {
+		const message = typeof data.data === "string" ? data.data : "Login failed";
+		throw new Error(message);
+	}
 	return data;
 }
 
@@ -34,7 +40,7 @@ async function login(
 async function register(
 	body: RegisterBody
 ): Promise<ApiResponse<{ user: User; token: string }>> {
-	const res = await fetch("http://localhost:4000/auth/register", {
+	const res = await fetch(`${API_BASE_URL}/auth/register`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(body),

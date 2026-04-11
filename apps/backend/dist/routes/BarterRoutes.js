@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const BarterController_1 = require("../controllers/BarterController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const router = (0, express_1.Router)();
+router.post("/", authMiddleware_1.authenticateToken, BarterController_1.createOffer);
+router.get("/my", authMiddleware_1.authenticateToken, BarterController_1.listUserOffers);
+router.get("/:id", authMiddleware_1.authenticateToken, BarterController_1.getOffer);
+router.put("/:id/respond", authMiddleware_1.authenticateToken, BarterController_1.respondToOffer);
+exports.default = router;

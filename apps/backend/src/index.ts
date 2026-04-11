@@ -5,6 +5,12 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import authRoutes from "./routes/AuthRoutes";
 import auctionRoutes from "./routes/AuctionRoutes";
+import itemRoutes from "./routes/ItemRoutes";
+import purchaseRoutes from "./routes/PurchaseRoutes";
+import barterRoutes from "./routes/BarterRoutes";
+import bidRoutes from "./routes/BidRoutes";
+import conversationRoutes from "./routes/ConversationRoutes";
+import userRoutes from "./routes/UserRoutes";
 import { initializeWebSocket } from "./websocket";
 
 const app = express();
@@ -26,6 +32,12 @@ app.get("/", (req, res) => {
 
 app.use("/auth", authRoutes);
 app.use("/auctions", auctionRoutes);
+app.use("/items", itemRoutes);
+app.use("/purchases", purchaseRoutes);
+app.use("/barter", barterRoutes);
+app.use("/bids", bidRoutes);
+app.use("/conversations", conversationRoutes);
+app.use("/users", userRoutes);
 
 // Initialize WebSocket handlers
 initializeWebSocket(io);

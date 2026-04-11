@@ -5,7 +5,7 @@ import Search from "../ui/Search";
 
 const Navbar: React.FC = () => {
 	return (
-		<header className='relative flex items-center justify-between px-8 py-4 dark:bg-gray-900'>
+		<header className='relative flex items-center justify-between px-8 py-4'>
 			{/* Left: Logo */}
 			<div className='flex items-center flex-shrink-0'>
 				<Link href='/'>
@@ -17,27 +17,27 @@ const Navbar: React.FC = () => {
 			<nav className='absolute left-1/2 transform -translate-x-1/2 flex space-x-6'>
 				<Link
 					href='/'
-					className='text-gray-800 dark:text-gray-200 font-semibold'>
+					className='text-foreground font-semibold'>
 					Featured
 				</Link>
 				<Link
 					href='/auctions'
-					className='text-gray-800 dark:text-gray-200 font-semibold'>
+					className='text-foreground font-semibold'>
 					Art
 				</Link>
 				<Link
 					href='/about'
-					className='text-gray-800 dark:text-gray-200 font-semibold'>
+					className='text-foreground font-semibold'>
 					Jewelry
 				</Link>
 				<Link
 					href='/contact'
-					className='text-gray-800 dark:text-gray-200 font-semibold'>
+					className='text-foreground font-semibold'>
 					Collectibles
 				</Link>
 				<Link
 					href='/help'
-					className='text-gray-800 dark:text-gray-200 font-semibold'>
+					className='text-foreground font-semibold'>
 					Apparel
 				</Link>
 			</nav>

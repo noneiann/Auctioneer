@@ -13,72 +13,99 @@ datasource db {
   provider = "postgresql"
 }
 
-
 model user {
-  id          String    @id @default(cuid())
-  email       String    @unique
-  password    String
-  firstName   String
-  lastName    String
-  username    String
-  permission  Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  firstName  String
+  lastName   String
+  username   String   @unique
+  permission Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  auctions    auction[] @relation("UserAuctions")
-  items       item[]    @relation("UserItems")
-  bids        bid[]     @relation("UserBids")
+  auctions     auction[]     @relation("UserAuctions")
+  items        item[]        @relation("UserItems")
+  bids         bid[]         @relation("UserBids")
+  chatMessages ChatMessage[]
+
+  purchases           Purchase[]     @relation("UserPurchases")
+  barterOffers        BarterOffer[]  @relation("UserBarterOffers")
+  buyerConversations  Conversation[] @relation("BuyerConversations")
+  sellerConversations Conversation[] @relation("SellerConversations")
 }
 
 model item {
-  id           String     @id @default(cuid())
-  name         String
-  description  String
-  imageUrl     String[]   
-  type         ItemType   // e.g. AUCTION, DIRECT, BARTER
-  price        Float?     // for direct/buy-sell or reference value
-  status       ItemStatus @default(AVAILABLE)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  name        String
+  description String
+  imageUrl    String[]
+  type        ItemType // e.g. AUCTION, DIRECT, BARTER
+  price       Float? // for direct/buy-sell or reference value
+  status      ItemStatus @default(AVAILABLE)
+  category    String     @default("other")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  ownerId      String
-  owner        user       @relation("UserItems", fields: [ownerId], references: [id])
+  ownerId String
+  owner   user   @relation("UserItems", fields: [ownerId], references: [id])
+
+  estimatedValue Float?
 
   // if this item is up for auction, link to that auction:
-  auction      auction?
+  auction auction?
+
+  purchase              Purchase?
+  barterOffersAsTarget  BarterOffer[]  @relation("TargetItemOffers")
+  barterOffersAsOffered BarterOffer[]  @relation("OfferedItemsInOffer")
+  conversations         Conversation[]
 }
 
 model auction {
-  id           String     @id @default(cuid())
+  id String @id @default(cuid())
 
-  startTime    DateTime
-  endTime      DateTime
-  startingBid  Float
-  currentBid   Float      @default(0)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  startTime   DateTime
+  endTime     DateTime
+  startingBid Float
+  currentBid  Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  ownerId      String
-  owner        user       @relation("UserAuctions", fields: [ownerId], references: [id])
-  estimatedValue Float?    
-  category     String     @default("other")
+  ownerId        String
+  owner          user   @relation("UserAuctions", fields: [ownerId], references: [id])
+  estimatedValue Float?
+  category       String @default("other")
 
-  itemId       String     @unique
-  item         item       @relation(fields: [itemId], references: [id])
+  itemId String @unique
+  item   item   @relation(fields: [itemId], references: [id])
 
-  bids         bid[]
+  bids bid[]
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         user         @relation(fields: [senderId], references: [id])
+  content        String
+  createdAt      DateTime     @default(now())
+  read           Boolean      @default(false)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
 }
 
 model bid {
-  id           String     @id @default(cuid())
-  amount       Float
-  createdAt    DateTime   @default(now())
+  id        String   @id @default(cuid())
+  amount    Float
+  createdAt DateTime @default(now())
 
-  bidderId     String
-  bidder       user       @relation("UserBids", fields: [bidderId], references: [id])
+  bidderId String
+  bidder   user   @relation("UserBids", fields: [bidderId], references: [id])
 
-  auctionId    String
-  auction      auction    @relation(fields: [auctionId], references: [id])
+  auctionId String
+  auction   auction @relation(fields: [auctionId], references: [id])
 }
 
 enum ItemType {
@@ -92,4 +119,62 @@ enum ItemStatus {
   SOLD
   EXPIRED
   WITHDRAWN
+}
+
+model Purchase {
+  id        String         @id @default(cuid())
+  itemId    String         @unique
+  item      item           @relation(fields: [itemId], references: [id])
+  buyerId   String
+  buyer     user           @relation("UserPurchases", fields: [buyerId], references: [id])
+  amount    Float
+  status    PurchaseStatus @default(PENDING)
+  createdAt DateTime       @default(now())
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model BarterOffer {
+  id           String      @id @default(cuid())
+  targetItemId String
+  targetItem   item        @relation("TargetItemOffers", fields: [targetItemId], references: [id])
+  offeredItems item[]      @relation("OfferedItemsInOffer")
+  offererId    String
+  offerer      user        @relation("UserBarterOffers", fields: [offererId], references: [id])
+  status       OfferStatus @default(PENDING)
+  message      String?
+  cashAdded    Float?      @default(0)
+  createdAt    DateTime    @default(now())
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+model Conversation {
+  id        String        @id @default(cuid())
+  itemId    String?
+  item      item?         @relation(fields: [itemId], references: [id])
+  type      ConvoType     @default(INQUIRY)
+  buyerId   String
+  buyer     user          @relation("BuyerConversations", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    user          @relation("SellerConversations", fields: [sellerId], references: [id])
+  messages  ChatMessage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum ConvoType {
+  AUCTION_WIN
+  BARTER
+  DIRECT
+  INQUIRY
 }

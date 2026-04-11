@@ -4,11 +4,12 @@ import {
 	CreateAuctionBody,
 	UpdateAuctionBody,
 } from "@/lib/AuctionApi";
-import { ApiResponse } from "@auctioneer/types";
-import React, { useEffect, useState } from "react";
+import type { ApiResponse } from "@auctioneer/types";
+import { useEffect, useState } from "react";
+import type { Auction } from "@/lib/AuctionApi";
 
 export default function useAuctions() {
-	const [data, setData] = useState<any[]>([]);
+	const [data, setData] = useState<Auction[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +18,7 @@ export default function useAuctions() {
 		auctionApi
 			.getAuctions()
 			.then((response) => {
-				setData(response.data);
+				setData(response.data.items);
 			})
 			.catch((err) => {
 				setError(err.message);
@@ -29,15 +30,16 @@ export default function useAuctions() {
 
 	const createAuction = async (
 		body: CreateAuctionBody
-	): Promise<ApiResponse<any> | null> => {
+	): Promise<ApiResponse<Auction> | null> => {
 		setLoading(true);
 
 		try {
 			const response = await auctionApi.createAuction(body);
 			setData((prev) => [...prev, response.data]);
 			return response;
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Failed to create auction";
+			setError(message);
 			return null;
 		} finally {
 			setLoading(false);
@@ -47,7 +49,7 @@ export default function useAuctions() {
 	const updateAuction = async (
 		id: string,
 		body: UpdateAuctionBody
-	): Promise<ApiResponse<any> | null> => {
+	): Promise<ApiResponse<Auction> | null> => {
 		setLoading(true);
 
 		try {
@@ -56,8 +58,9 @@ export default function useAuctions() {
 				prev.map((auction) => (auction.id === id ? response.data : auction))
 			);
 			return response;
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Failed to update auction";
+			setError(message);
 			return null;
 		} finally {
 			setLoading(false);
@@ -71,8 +74,9 @@ export default function useAuctions() {
 			await auctionApi.deleteAuction(id);
 			setData((prev) => prev.filter((auction) => auction.id !== id));
 			return true;
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Failed to delete auction";
+			setError(message);
 			return false;
 		} finally {
 			setLoading(false);

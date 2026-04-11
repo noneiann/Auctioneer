@@ -14,6 +14,17 @@ export default function auctionWebSocket(
 ) {
 	const user = socket.data.user;
 
+	const userSelect = {
+		id: true,
+		email: true,
+		username: true,
+		firstName: true,
+		lastName: true,
+		permission: true,
+		createdAt: true,
+		updatedAt: true,
+	};
+
 	// Join auction room
 	socket.on("join_auction", async (auctionId: string) => {
 		try {
@@ -23,22 +34,12 @@ export default function auctionWebSocket(
 				include: {
 					item: true,
 					owner: {
-						select: {
-							id: true,
-							username: true,
-							firstName: true,
-							lastName: true,
-						},
+						select: userSelect,
 					},
 					bids: {
 						include: {
 							bidder: {
-								select: {
-									id: true,
-									username: true,
-									firstName: true,
-									lastName: true,
-								},
+								select: userSelect,
 							},
 						},
 						orderBy: {
@@ -108,100 +109,91 @@ export default function auctionWebSocket(
 					return;
 				}
 
-				// Fetch auction with current state
-				const auction = await prisma.auction.findUnique({
-					where: { id: auctionId },
-					include: {
-						item: true,
-						bids: {
-							orderBy: { createdAt: "desc" },
-							take: 1,
+				const result = await prisma.$transaction(async (tx) => {
+					const auction = await tx.auction.findUnique({
+						where: { id: auctionId },
+						select: {
+							id: true,
+							startTime: true,
+							endTime: true,
+							startingBid: true,
+							currentBid: true,
+							ownerId: true,
 						},
-					},
-				});
-
-				if (!auction) {
-					socket.emit("bid_error", { message: "Auction not found" });
-					return;
-				}
-
-				// Validation checks
-				const now = new Date();
-				if (now < auction.startTime) {
-					socket.emit("bid_error", { message: "Auction has not started yet" });
-					return;
-				}
-
-				if (now > auction.endTime) {
-					socket.emit("bid_error", { message: "Auction has ended" });
-					return;
-				}
-
-				if (auction.ownerId === user.userId) {
-					socket.emit("bid_error", {
-						message: "Cannot bid on your own auction",
 					});
-					return;
-				}
 
-				const currentBid = auction.currentBid || auction.startingBid;
-				if (amount <= currentBid) {
-					socket.emit("bid_error", {
-						message: `Bid must be higher than current bid of $${currentBid}`,
+					if (!auction) {
+						throw new Error("Auction not found");
+					}
+
+					const now = new Date();
+					if (now < auction.startTime) {
+						throw new Error("Auction has not started yet");
+					}
+
+					if (now > auction.endTime) {
+						throw new Error("Auction has ended");
+					}
+
+					if (auction.ownerId === user.userId) {
+						throw new Error("Cannot bid on your own auction");
+					}
+
+					const currentBid = Math.max(
+						auction.currentBid || 0,
+						auction.startingBid
+					);
+					if (amount <= currentBid) {
+						throw new Error(
+							`Bid must be higher than current bid of $${currentBid}`
+						);
+					}
+
+					const updateResult = await tx.auction.updateMany({
+						where: { id: auctionId, currentBid: auction.currentBid },
+						data: { currentBid: amount },
 					});
-					return;
-				}
+					if (updateResult.count === 0) {
+						throw new Error("Bid conflict, please retry");
+					}
 
-				// Create bid in database
-				const newBid = await prisma.bid.create({
-					data: {
-						amount,
-						bidderId: user.userId,
-						auctionId,
-					},
-					include: {
-						bidder: {
-							select: {
-								id: true,
-								username: true,
-								firstName: true,
-								lastName: true,
+					const newBid = await tx.bid.create({
+						data: {
+							amount,
+							bidderId: user.userId,
+							auctionId,
+						},
+						include: {
+							bidder: {
+								select: userSelect,
 							},
 						},
-					},
-				});
+					});
 
-				// Update auction current bid
-				const updatedAuction = await prisma.auction.update({
-					where: { id: auctionId },
-					data: { currentBid: amount },
-					include: {
-						item: true,
-						owner: {
-							select: {
-								id: true,
-								username: true,
-								firstName: true,
-								lastName: true,
-							},
+					const updatedAuction = await tx.auction.findUnique({
+						where: { id: auctionId },
+						include: {
+							item: true,
+							owner: { select: userSelect },
 						},
-					},
+					});
+
+					return { newBid, updatedAuction };
 				});
 
 				// Broadcast to all users in auction room
 				const roomName = `auction:${auctionId}`;
+				const bidCount = await prisma.bid.count({ where: { auctionId } });
 				io.to(roomName).emit("bid_placed", {
-					bid: newBid,
-					auction: updatedAuction,
-					bidCount:
-						(io.sockets.adapter.rooms.get(roomName)?.size || 0) +
-						(auction.bids?.length || 0),
+					bid: result.newBid,
+					auction: result.updatedAuction,
+					bidCount,
 				});
 
 				// Send success confirmation to bidder
 				socket.emit("bid_success", {
-					bid: newBid,
-					auction: updatedAuction,
+					bid: result.newBid,
+					auction: result.updatedAuction,
 				});
 
 				console.log(
@@ -209,7 +201,11 @@ export default function auctionWebSocket(
 				);
 			} catch (error) {
 				console.error("Error placing bid:", error);
-				socket.emit("bid_error", { message: "Failed to place bid" });
+				const message =
+					error instanceof Error && error.message
+						? error.message
+						: "Failed to place bid";
+				socket.emit("bid_error", { message });
 			}
 		}
 	);

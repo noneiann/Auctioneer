@@ -1,0 +1,69 @@
+
+./src/app/(main)/auctions/[auctionId]/page.tsx
+6:10  Warning: 'Clock' is defined but never used.  @typescript-eslint/no-unused-vars
+9:8  Warning: 'AuctionChat' is defined but never used.  @typescript-eslint/no-unused-vars
+16:6  Warning: 'TabKey' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(main)/market/page.tsx
+2:8  Warning: 'ItemCard' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(main)/messages/page.tsx
+9:10  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+10:53  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+12:53  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/(main)/page.tsx
+38:25  Warning: 'error' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+272:54  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+272:152  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/(main)/trade/page.tsx
+2:8  Warning: 'ItemCard' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(seller)/seller/alerts/page.tsx
+123:66  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/(seller)/seller/chat/page.tsx
+4:53  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
+5:8  Warning: 'Image' is defined but never used.  @typescript-eslint/no-unused-vars
+142:45  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/(seller)/seller/components/DashboardCards.tsx
+8:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/(seller)/seller/components/LeftSidebar.tsx
+18:2  Warning: 'MessageSquare' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(seller)/seller/components/RightPanel.tsx
+4:40  Warning: 'Circle' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(seller)/seller/items/page.tsx
+10:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+67:64  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/(seller)/seller/profile/page.tsx
+53:18  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/(seller)/seller/reports/page.tsx
+8:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/auction/AuctionBiddingPanel.tsx
+6:17  Warning: 'Wifi' is defined but never used.  @typescript-eslint/no-unused-vars
+8:8  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/auction/AuctionChat.tsx
+12:50  Warning: 'minimal' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/auction/AuctionImageViewer.tsx
+4:27  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/messaging/ChatDrawer.tsx
+3:10  Warning: 'useState' is defined but never used.  @typescript-eslint/no-unused-vars
+4:28  Warning: 'Send' is defined but never used.  @typescript-eslint/no-unused-vars
+17:79  Warning: 'targetUserId' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/api.ts
+48:32  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+49:31  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

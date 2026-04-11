@@ -2,6 +2,7 @@
 import { X, DollarSign, Calendar, Package } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 
 type UpdateAuctionData = {
 	itemName?: string;
@@ -12,8 +13,23 @@ type UpdateAuctionData = {
 	endTime?: string;
 };
 
+type EditAuctionModalAuction = {
+	id: string;
+	startingBid?: number;
+	currentBid?: number;
+	category?: string;
+	endTime?: string;
+	createdAt?: string;
+	bids?: Array<{ id: string }>;
+	item?: {
+		name?: string;
+		description?: string;
+		imageUrl?: string[];
+	};
+};
+
 interface EditAuctionModalProps {
-	auction: any;
+	auction: EditAuctionModalAuction | null;
 	isOpen: boolean;
 	onClose: () => void;
 	onSave: (id: string, data: UpdateAuctionData) => Promise<void>;
@@ -71,6 +87,9 @@ export default function EditAuctionModal({
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (!auction) {
+			return;
+		}
 		setLoading(true);
 		try {
 			await onSave(auction.id, formData);
@@ -82,7 +101,7 @@ export default function EditAuctionModal({
 		}
 	};
 
-	if (!isOpen) return null;
+	if (!isOpen || !auction) return null;
 
 	const isActive = auction?.endTime
 		? new Date(auction.endTime) > new Date()
@@ -90,14 +109,14 @@ export default function EditAuctionModal({
 
 	const modalContent = (
 		<div className='fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]'>
-			<div className='bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4'>
+			<div className='bg-surface-raised rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4'>
 				<div className='flex justify-between items-center mb-6'>
-					<h2 className='text-xl font-semibold text-gray-900 dark:text-white'>
+					<h2 className='text-xl font-semibold text-foreground'>
 						Edit Auction Details
 					</h2>
 					<button
 						onClick={onClose}
-						className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'>
+						className='text-neutral-400 hover:text-neutral-700'>
 						<X className='w-5 h-5' />
 					</button>
 				</div>
@@ -105,7 +124,7 @@ export default function EditAuctionModal({
 				<form onSubmit={handleSubmit} className='space-y-6'>
 					{/* Item Name */}
 					<div>
-						<label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+					<label className='block text-sm font-medium text-neutral-700 mb-2'>
 							Item Name
 						</label>
 						<input
@@ -114,7 +133,7 @@ export default function EditAuctionModal({
 							onChange={(e) =>
 								setFormData({ ...formData, itemName: e.target.value })
 							}
-							className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+							className='w-full px-3 py-2 border border-border rounded-lg bg-neutral-100 text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent'
 							placeholder='Enter item name'
 							required
 						/>
@@ -122,7 +141,7 @@ export default function EditAuctionModal({
 
 					{/* Item Description */}
 					<div>
-						<label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+					<label className='block text-sm font-medium text-neutral-700 mb-2'>
 							Item Description
 						</label>
 						<textarea
@@ -131,7 +150,7 @@ export default function EditAuctionModal({
 							onChange={(e) =>
 								setFormData({ ...formData, description: e.target.value })
 							}
-							className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none'
+							className='w-full px-3 py-2 border border-border rounded-lg bg-neutral-100 text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none'
 							placeholder='Describe your item in detail'
 							required
 						/>
@@ -139,13 +158,13 @@ export default function EditAuctionModal({
 
 					{/* Starting Bid */}
 					<div>
-						<label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+					<label className='block text-sm font-medium text-neutral-700 mb-2'>
 							Starting Bid
 						</label>
 						<div className='relative'>
 							<DollarSign
 								size={16}
-								className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+								className='absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400'
 							/>
 							<input
 								type='number'
@@ -158,25 +177,25 @@ export default function EditAuctionModal({
 										startingBid: parseFloat(e.target.value),
 									})
 								}
-								className='w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+								className='w-full pl-10 pr-3 py-2 border border-border rounded-lg bg-neutral-100 text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent'
 								placeholder='0.00'
 								required
 							/>
 						</div>
-						<p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+						<p className='text-xs text-neutral-500 mt-1'>
 							Note: This can only be changed if there are no bids yet
 						</p>
 					</div>
 
 					{/* Auction End Time */}
 					<div>
-						<label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+					<label className='block text-sm font-medium text-neutral-700 mb-2'>
 							Auction End Time
 						</label>
 						<div className='relative'>
 							<Calendar
 								size={16}
-								className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+								className='absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400'
 							/>
 							<input
 								type='datetime-local'
@@ -184,17 +203,17 @@ export default function EditAuctionModal({
 								onChange={(e) =>
 									setFormData({ ...formData, endTime: e.target.value })
 								}
-								className='w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+								className='w-full pl-10 pr-3 py-2 border border-border rounded-lg bg-neutral-100 text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent'
 							/>
 						</div>
-						<p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+						<p className='text-xs text-neutral-500 mt-1'>
 							You can extend the auction time, but not shorten it
 						</p>
 					</div>
 
 					{/* Image URLs */}
 					<div>
-						<label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+					<label className='block text-sm font-medium text-neutral-700 mb-2'>
 							Item Images
 						</label>
 						<div className='space-y-3'>
@@ -203,15 +222,15 @@ export default function EditAuctionModal({
 								<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
 									{imageUrls.map((url, index) => (
 										<div key={index} className='relative group'>
-											<img
-												src={url}
-												alt={`Item image ${index + 1}`}
-												className='w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-600'
-												onError={(e) => {
-													(e.target as HTMLImageElement).src =
-														"https://via.placeholder.com/100?text=Error";
-												}}
-											/>
+											<div className='relative w-full h-20'>
+												<Image
+													src={url}
+													alt={`Item image ${index + 1}`}
+													fill
+													sizes='100px'
+													className='object-cover rounded-lg border border-border'
+												/>
+											</div>
 											<button
 												type='button'
 												onClick={() => handleRemoveImage(index)}
@@ -224,13 +243,13 @@ export default function EditAuctionModal({
 							)}
 
 							{/* Add New Image URL */}
-							<div className='border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4'>
+							<div className='border-2 border-dashed border-border rounded-lg p-4'>
 								<div className='text-center'>
 									<Package
 										size={32}
-										className='mx-auto text-gray-400 dark:text-gray-500 mb-2'
+										className='mx-auto text-neutral-400 mb-2'
 									/>
-									<p className='text-sm text-gray-500 dark:text-gray-400 mb-3'>
+									<p className='text-sm text-neutral-500 mb-3'>
 										Add image URL
 									</p>
 									<div className='space-y-2'>
@@ -238,13 +257,13 @@ export default function EditAuctionModal({
 											type='url'
 											value={newImageUrl}
 											onChange={(e) => setNewImageUrl(e.target.value)}
-											className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+											className='w-full px-3 py-2 border border-border rounded-lg bg-neutral-100 text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm'
 											placeholder='https://example.com/image.jpg'
 										/>
 										<button
 											type='button'
 											onClick={handleAddImage}
-											className='w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm'>
+											className='w-full px-3 py-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 transition-colors text-sm'>
 											Add Image URL
 										</button>
 									</div>
@@ -254,40 +273,40 @@ export default function EditAuctionModal({
 					</div>
 
 					{/* Current Auction Status Info */}
-					<div className='bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4'>
-						<h4 className='font-medium text-gray-900 dark:text-white mb-3'>
+					<div className='bg-neutral-50 rounded-lg p-4'>
+						<h4 className='font-medium text-foreground mb-3'>
 							Auction Status
 						</h4>
 						<div className='grid grid-cols-2 gap-4 text-sm'>
 							<div>
-								<span className='text-gray-500 dark:text-gray-400'>
+								<span className='text-neutral-500'>
 									Current Bid:
 								</span>
-								<p className='font-medium text-gray-900 dark:text-white'>
+								<p className='font-medium text-foreground'>
 									${auction?.currentBid || auction?.startingBid}
 								</p>
 							</div>
 							<div>
-								<span className='text-gray-500 dark:text-gray-400'>
+								<span className='text-neutral-500'>
 									Total Bids:
 								</span>
-								<p className='font-medium text-gray-900 dark:text-white'>
+								<p className='font-medium text-foreground'>
 									{auction?.bids?.length || 0}
 								</p>
 							</div>
 							<div>
-								<span className='text-gray-500 dark:text-gray-400'>
+								<span className='text-neutral-500'>
 									Status:
 								</span>
-								<p className='font-medium text-gray-900 dark:text-white'>
+								<p className='font-medium text-foreground'>
 									{isActive ? "Active" : "Ended"}
 								</p>
 							</div>
 							<div>
-								<span className='text-gray-500 dark:text-gray-400'>
+								<span className='text-neutral-500'>
 									Created:
 								</span>
-								<p className='font-medium text-gray-900 dark:text-white'>
+								<p className='font-medium text-foreground'>
 									{auction?.createdAt
 										? new Date(auction.createdAt).toLocaleDateString()
 										: "N/A"}
@@ -297,17 +316,17 @@ export default function EditAuctionModal({
 					</div>
 
 					{/* Action Buttons */}
-					<div className='flex space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600'>
+					<div className='flex space-x-3 pt-4 border-t border-border'>
 						<button
 							type='button'
 							onClick={onClose}
-							className='flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'>
+							className='flex-1 px-4 py-2 border border-border text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors'>
 							Cancel
 						</button>
 						<button
 							type='submit'
 							disabled={loading}
-							className='flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed'>
+							className='flex-1 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed'>
 							{loading ? "Saving..." : "Save Changes"}
 						</button>
 					</div>

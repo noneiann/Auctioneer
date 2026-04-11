@@ -1,8 +1,6 @@
-import { Router, Request, Response } from "express";
+import { Request, Response } from "express";
 import { ApiResponse, AuthenticatedRequest } from "@auctioneer/types/src";
 import auctionServices from "../services/AuctionServices";
-
-import { PrismaClient, Prisma } from "@auctioneer/db/generated/prisma";
 import itemServices from "../services/ItemServices";
 
 // Create a new auction
@@ -48,6 +46,7 @@ export const createAuction = async (
 			imageUrl,
 			type,
 			price,
+			category,
 			ownerId: req.user.userId,
 		});
 
@@ -93,9 +92,43 @@ export const listAuctions = async (
 	res: Response<ApiResponse<any>>
 ) => {
 	try {
-		console.log(req.body);
-		const auctions = await auctionServices.listAuctions();
-		return res.json({ success: true, data: auctions });
+		const page = Math.max(1, Number.parseInt(req.query.page as string) || 1);
+		const pageSize = Math.min(
+			Math.max(1, Number.parseInt(req.query.pageSize as string) || 20),
+			100
+		);
+		const category =
+			typeof req.query.category === "string" ? req.query.category : undefined;
+		const ownerId =
+			typeof req.query.ownerId === "string" ? req.query.ownerId : undefined;
+		const rawItemType =
+			typeof req.query.itemType === "string" ? req.query.itemType : undefined;
+		const itemType =
+			rawItemType && ["AUCTION", "DIRECT", "BARTER"].includes(rawItemType)
+				? rawItemType
+				: undefined;
+
+		const { items, total } = await auctionServices.listAuctions({
+			page,
+			pageSize,
+			category,
+			ownerId,
+			itemType: itemType as any,
+		});
+		return res.json({
+			success: true,
+			data: {
+				items,
+				meta: {
+					page,
+					pageSize,
+					total,
+					totalPages: Math.max(1, Math.ceil(total / pageSize)),
+					hasNextPage: page * pageSize < total,
+					hasPreviousPage: page > 1,
+				},
+			},
+		});
 	} catch (error: any) {
 		console.error("Error listing auctions:", error);
 		return res.status(500).json({ success: false, data: "Server error" });

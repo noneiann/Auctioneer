@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { useAuthStore } from "@/stores/AuthStore";
 
 interface SocketContextType {
 	socket: Socket | null;
@@ -17,35 +18,24 @@ export const useSocket = () => useContext(SocketContext);
 export function SocketProvider({ children }: { children: React.ReactNode }) {
 	const [socket, setSocket] = useState<Socket | null>(null);
 	const [isConnected, setIsConnected] = useState(false);
+	const token = useAuthStore((state) => state.token);
+	const socketUrl =
+		process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 	useEffect(() => {
-		// Get auth token from localStorage
-		const getAuthToken = (): string | null => {
-			try {
-				const authStorage = localStorage.getItem("auth-storage");
-				if (authStorage) {
-					const parsed = JSON.parse(authStorage);
-					return parsed.state?.token || null;
-				}
-				return null;
-			} catch (error) {
-				console.error("Error parsing auth storage:", error);
-				return null;
-			}
-		};
-
-		const token = getAuthToken();
-
 		if (!token) {
 			console.log("No auth token found, skipping socket connection");
+			setSocket(null);
+			setIsConnected(false);
 			return;
 		}
 
 		// Create socket connection
-		const socketInstance = io("http://localhost:4000", {
+		const socketInstance = io(socketUrl, {
 			auth: {
 				token,
 			},
+			transports: ["polling", "websocket"],
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionAttempts: 5,
@@ -68,11 +58,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
 		setSocket(socketInstance);
 
-		// Cleanup on unmount
+		// Cleanup on unmount or when token/url changes
 		return () => {
 			socketInstance.disconnect();
 		};
-	}, []);
+	}, [token, socketUrl]);
 
 	return (
 		<SocketContext.Provider value={{ socket, isConnected }}>

@@ -11,6 +11,11 @@ interface AuthenticatedSocket extends Socket {
 }
 
 export function initializeWebSocket(io: Server) {
+	const jwtSecret = process.env.JWT_SECRET;
+	if (!jwtSecret) {
+		throw new Error("JWT_SECRET environment variable is not set");
+	}
+
 	// Authentication middleware
 	io.use((socket: AuthenticatedSocket, next) => {
 		const token = socket.handshake.auth.token;
@@ -20,10 +25,7 @@ export function initializeWebSocket(io: Server) {
 		}
 
 		try {
-			const decoded = jwt.verify(
-				token,
-				process.env.JWT_SECRET || "auctioneer_secret_902384"
-			) as JwtPayloadUser;
+			const decoded = jwt.verify(token, jwtSecret) as JwtPayloadUser;
 			socket.data.user = decoded;
 			next();
 		} catch (error) {
